@@ -97,6 +97,10 @@ sui client publish --gas-budget 100000000
 
 Note the Package ID from the output.
 
+**Deployed Contract (Testnet):**
+- Package ID: `0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6`
+- Transaction: `AdH8tBSVJ87FRG8tPuG2NDSUtX9F4ExBwZ9SuDt5Q4M6`
+
 ### 3. Setup Frontend
 
 ```bash
@@ -107,8 +111,7 @@ cp .env.example .env.local
 
 Edit `.env.local` with your configuration:
 ```
-NEXT_PUBLIC_PACKAGE_ID=<your_package_id>
-OPENAI_API_KEY=<your_openai_key>
+NEXT_PUBLIC_PACKAGE_ID=0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6
 ANTHROPIC_API_KEY=<your_anthropic_key>
 ```
 
