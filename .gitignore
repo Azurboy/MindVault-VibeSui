@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.pnp
+.pnp.js
 
 # Build outputs
 .next/
@@ -9,7 +11,7 @@ build/
 dist/
 
 # Move build artifacts
-MindVault-Sui/move/build/
+contracts/*/build/
 
 # Environment files
 .env
@@ -34,8 +36,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Testing
+coverage/
+
 # TypeScript
 *.tsbuildinfo
+next-env.d.ts
 
 # Vercel
 .vercel

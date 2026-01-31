@@ -56,7 +56,7 @@ MindVault is a privacy-focused AI API gateway that gives users 100% ownership of
 ## Project Structure
 
 ```
-MindVault-Sui/
+SuiVibe/
 ├── contracts/
 │   └── data_vault/
 │       ├── Move.toml
@@ -84,8 +84,8 @@ MindVault-Sui/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Azurboy/MindVault-Sui.git
-cd MindVault-Sui
+git clone https://github.com/Azurboy/SuiVibe.git
+cd SuiVibe
 ```
 
 ### 2. Deploy Smart Contract
@@ -180,6 +180,6 @@ MIT License
 
 ## Links
 
-- [GitHub Repository](https://github.com/Azurboy/MindVault-Sui)
+- [GitHub Repository](https://github.com/Azurboy/SuiVibe)
 - [Sui Documentation](https://docs.sui.io/)
 - [Walrus Documentation](https://docs.walrus.site/)
