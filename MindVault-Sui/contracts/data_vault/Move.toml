@@ -1,0 +1,8 @@
+[package]
+name = "mindvault"
+edition = "2024"
+
+[dependencies]
+
+[addresses]
+mindvault = "0x0"
