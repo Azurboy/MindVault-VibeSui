@@ -1,10 +1,6 @@
 # MindVault
 
-> **Your Data, Your Rules.** | **你的数据，你做主。**
-
-AI conversations you truly own. Client-side encryption, decentralized storage, and blockchain-based access control on Sui.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Azurboy/MindVault-VibeSui&root-directory=frontend&env=NEXT_PUBLIC_PACKAGE_ID)
+> **Your AI conversations. Your encryption keys. Your rules.**
 
 [English](#english) | [中文](#中文)
 
@@ -12,579 +8,319 @@ AI conversations you truly own. Client-side encryption, decentralized storage, a
 
 <a name="english"></a>
 
-## Author's Philosophy
+## The Problem
 
-### Why MindVault?
+Every message you send to ChatGPT, Claude, or any AI service is:
 
-When we use ChatGPT, Claude, or other AI services, there's an uncomfortable reality:
-- Your conversation history is stored on the provider's servers
-- You don't know who can access your data, or if it's used for training
-- You can't truly delete or migrate your data
+- **Tied to your identity** — email, phone, payment method
+- **Stored on their servers** — indefinitely, without your control
+- **Potentially used for training** — your thoughts become their product
+- **Building your psychological profile** — one conversation at a time
 
-MindVault was built to answer one question: **Who should own AI conversation data?**
+You're not just asking questions. You're handing over your thought patterns, business secrets, personal struggles, and creative ideas — all linked to who you are.
 
-Our answer: **The user.**
-
-### An Honest Disclosure
-
-We believe in transparency. Here's exactly what MindVault can and cannot do:
-
-**What We Can Do:**
-- Encrypt your conversations before storage - the platform never sees plaintext
-- Store data on decentralized infrastructure you control (Walrus)
-- Manage access permissions on-chain with instant revocation (Sui)
-- Process AI requests statelessly - no server-side data retention
-- Let you export, delete, or migrate your data freely
-
-**What We Cannot Do (Yet):**
-- Hide your messages from the AI provider during inference - they need to see plaintext to process it
-- This is a fundamental limitation of current LLM technology, not something we can bypass
-
-### Future Direction
-
-We're researching next-generation privacy AI technologies:
-- **TEE (Trusted Execution Environment)**: Run AI inference in hardware-secured enclaves where even operators can't see your data
-- **Local Models**: Support running open-source models locally so your data never leaves your device
-
-MindVault aims to become **privacy AI infrastructure**, progressively achieving true end-to-end privacy as technology evolves.
+**MindVault exists because this shouldn't be normal.**
 
 ---
 
-## User Story
+## The Solution
 
-### The Problem
+MindVault is a privacy-first AI chat interface where:
 
-Alex is a freelancer who uses AI assistants to:
-- Organize client requirements
-- Draft contracts and emails
-- Brainstorm product ideas
-
-But Alex has a concern: these conversations contain client-sensitive information, business ideas, and even private thoughts. Alex doesn't know how long the data is stored, if it's used for training, or who might access it.
-
-### The MindVault Solution
-
-With MindVault:
-
-1. **Connect Wallet**: Alex logs in with a Sui wallet - no registration needed
-2. **Encrypted Storage**: Every message is encrypted in the browser before being stored
-3. **Keys in Your Hands**: The encryption key is derived from Alex's wallet signature - only Alex can decrypt
-4. **Full Control**: Alex can delete any conversation instantly, without "requesting" deletion
-5. **Fully Portable**: If a better service comes along, Alex can export all data and take it
-
-Alex can finally discuss sensitive topics with AI confidently - not because the AI can't see it (it still does during inference), but because the data is **completely under Alex's control** and won't persist on some unknown server forever.
+| What | How |
+|------|-----|
+| **Your messages are encrypted** | AES-256-GCM encryption happens in your browser, before anything leaves |
+| **You hold the keys** | Encryption key derived from your wallet signature — only you can decrypt |
+| **Storage is decentralized** | Encrypted data stored on Walrus, metadata on Sui blockchain |
+| **History belongs to you** | Load past conversations anytime, from any device, with your wallet |
+| **Proofs are on-chain** | Tamper-proof timestamps prove when conversations happened |
 
 ---
 
-## Current Features
+## Who Is This For?
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Wallet Connection | Live | Sui Wallet, Suiet, and more |
-| Client-Side Encryption | Live | AES-256-GCM, key derived from wallet signature |
-| Decentralized Storage | Live | Walrus testnet integration |
-| On-Chain Access Control | Live | Sui smart contract for permissions |
-| Instant Revocation | Live | User can unilaterally revoke any authorization |
-| Custom AI Providers | Live | Bring your own API key (OpenAI, Claude, DeepSeek, etc.) |
-| Stateless Processing | Live | API layer never persists any data |
-| **Chat History Loading** | **Live** | **Load and decrypt past conversations from Walrus** |
-| **Proof Verification** | **Live** | **Generate and verify conversation authenticity proofs** |
-| Local Models | Planned | WebLLM / Ollama support |
-| TEE Inference | Research | Hardware-secured AI processing |
+### The Privacy-Conscious Professional
+
+**Sarah** is a startup founder who uses AI to brainstorm product strategies, draft investor emails, and analyze competitors. Her conversations contain trade secrets she'd never share publicly.
+
+*With traditional AI services:* All her strategic thinking is stored on OpenAI's servers, tied to her company email, potentially used for training, and vulnerable to data breaches.
+
+*With MindVault:* Her conversations are encrypted before leaving her browser. Even if Walrus is compromised, attackers get meaningless ciphertext. She can prove when she had an idea (for IP disputes) without revealing what it was.
 
 ---
 
-## New: Conversation Proofs
+### The Researcher Who Needs Proof
 
-MindVault now supports **conversation proofs** - cryptographic evidence that a conversation was stored on-chain at a specific time.
+**Dr. Chen** is documenting a novel research methodology through AI-assisted brainstorming. Six months later, a competitor publishes something similar.
 
-### Why Proofs Matter
+*The problem:* Screenshots can be faked. Server logs can be altered. How do you prove you had the idea first?
 
-- **Authenticity**: Prove a conversation happened at a specific time
-- **Tamper-proof**: On-chain timestamps cannot be forged
-- **Verifiable**: Anyone can verify without seeing the content
-- **Portable**: Export and share proofs as JSON files
+*With MindVault:* Every conversation is anchored to the Sui blockchain with a precise timestamp. Dr. Chen exports a cryptographic proof showing her encrypted conversation existed on a specific date. She can optionally reveal the content to prove what was inside. The blockchain doesn't lie.
 
-### How to Use
+---
 
-1. **Export a Proof**: Click the "Proof" button on any encrypted message
-2. **Verify a Proof**: Go to `/verify` and paste the proof JSON
-3. **Share**: Send the proof file to anyone who needs to verify
+### The User Who Wants Control
 
-### What's Verified
+**Alex** simply doesn't want a corporation building a psychological profile from years of AI conversations. He wants to use AI without becoming the product.
 
-- Vault exists on Sui blockchain
-- Blob exists on Walrus storage
-- Timestamp is valid
-- Transaction (if provided) matches the proof
+*With MindVault:*
+- Identity = wallet address (pseudonymous)
+- Current conversation = sent to AI, but can use anonymous API relays
+- History = encrypted, only Alex can read it
+
+Even if data leaks, it's **fragmented, encrypted, and unlinked**. A broken profile is infinitely better than a complete one.
+
+---
+
+## Privacy Levels
+
+Choose your tradeoff:
+
+| Setup | Who sees your data? |
+|-------|---------------------|
+| MindVault + OpenAI/Claude API | Storage: Only you / Inference: Provider sees current message |
+| MindVault + Anonymous API relay | Storage: Only you / Inference: No identity link |
+| MindVault + Local model (Ollama) | Storage: Only you / Inference: Never leaves your device |
+
+**Key insight:** Pair MindVault with an anonymous API (crypto payment, no account) for true end-to-end privacy.
 
 ---
 
 ## Architecture
 
-### Dual-Layer Privacy Model
-
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           User Browser (Trust Zone)                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────────────┐  │
-│  │ Sui Wallet  │  │ AES-256     │  │ Key Derivation (from wallet sig)    │  │
-│  │ Connect     │  │ Encrypt     │  │ Key = HKDF(wallet.sign("mindvault"))│  │
-│  └─────────────┘  └─────────────┘  └─────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────────────┘
-                             │
-        ┌────────────────────┴────────────────────┐
-        │                                         │
-        ▼                                         ▼
-┌───────────────────────────────┐  ┌───────────────────────────────────────────┐
-│   Cold Storage Layer          │  │   Hot Processing Layer                     │
-│        100% Web3              │  │      Stateless Enclave                    │
-├───────────────────────────────┤  ├───────────────────────────────────────────┤
-│  Sui Blockchain               │  │  Next.js API Routes (Serverless)          │
-│  - DataVault Object           │  │  - READ: Receive decrypted plaintext      │
-│  - Authorization (Dynamic)    │  │  - PROCESS: Call LLM                      │
-│                               │  │  - FORGET: Memory released, no persistence│
-│  Walrus Storage               │  │                                           │
-│  - AES-256 encrypted blobs    │  │  LLM APIs: OpenAI, Claude, DeepSeek, etc  │
-└───────────────────────────────┘  └───────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     YOUR BROWSER (Trust Zone)                    │
+│  ┌───────────┐  ┌───────────┐  ┌─────────────────────────────┐  │
+│  │ Sui Wallet│  │ AES-256   │  │ Key = HKDF(wallet.sign(...))│  │
+│  │ (identity)│  │ (encrypt) │  │ (only you have this)        │  │
+│  └───────────┘  └───────────┘  └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+           ┌──────────────────┴──────────────────┐
+           ▼                                     ▼
+┌─────────────────────────┐       ┌─────────────────────────────┐
+│   COLD STORAGE (Web3)   │       │   HOT PROCESSING (Stateless)│
+│                         │       │                             │
+│  Sui: metadata, proofs  │       │  API Routes: call LLM,      │
+│  Walrus: encrypted blobs│       │  return response, forget    │
+│                         │       │                             │
+│  📌 You own this. 100%. │       │  📌 We see it briefly,      │
+│                         │       │     but never store it.     │
+└─────────────────────────┘       └─────────────────────────────┘
 ```
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- Sui CLI (optional, for contract deployment)
-- Sui Wallet (Sui Wallet, Suiet, etc.)
-
-### 1. Clone the Repository
-
 ```bash
+# Clone and install
 git clone https://github.com/Azurboy/MindVault-VibeSui.git
-cd MindVault-VibeSui
-```
-
-### 2. Setup Frontend
-
-```bash
-cd frontend
+cd MindVault-VibeSui/frontend
 npm install
+
+# Configure
 cp .env.example .env.local
-```
+# Edit .env.local: NEXT_PUBLIC_PACKAGE_ID=0xd8e2b3...
 
-Edit `.env.local`:
-```env
-NEXT_PUBLIC_PACKAGE_ID=0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6
-```
-
-### 3. Run Development Server
-
-```bash
+# Run
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### 4. Configure AI Provider
-
-1. Connect your Sui wallet
-2. Go to **Settings** page
-3. Configure your AI provider (baseURL, API key, model)
-4. Start chatting!
+Then: Connect wallet → Settings → Add your AI provider → Start chatting
 
 ---
 
-## Vercel Deployment
-
-### One-Click Deploy
+## One-Click Deploy
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Azurboy/MindVault-VibeSui&root-directory=frontend&env=NEXT_PUBLIC_PACKAGE_ID)
 
-### Manual Deployment Steps
-
-1. Fork this repository to your GitHub account
-
-2. Create a new project in Vercel
-   - Click "Add New" → "Project"
-   - Select your forked repository
-
-3. **Important Configuration**:
-   - **Root Directory**: `frontend`
-   - **Framework Preset**: `Next.js`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `.next`
-
-4. Set environment variables:
-
-   | Variable | Value | Required |
-   |----------|-------|----------|
-   | `NEXT_PUBLIC_PACKAGE_ID` | `0xd8e2b3...` | Yes |
-
-5. Click Deploy
-
-### Custom AI Provider Configuration
-
-MindVault supports user-configured AI providers in the Settings page - no code changes needed:
-
-```
-Settings → AI Provider Configuration
-├── API Base URL: https://api.openai.com/v1  (or any compatible endpoint)
-├── API Key: sk-xxx... (stored in browser localStorage only)
-└── Model: gpt-4o / claude-sonnet-4-20250514 / deepseek-chat / ...
-```
-
-**Supported Compatible Endpoints:**
-- OpenAI API
-- Anthropic Claude API
-- Azure OpenAI
-- DeepSeek
-- Moonshot
-- Any OpenAI-compatible API (e.g., local Ollama)
-
-### FAQ
-
-**Q: Deployment fails with "No Next.js version detected"**
-
-A: Make sure Root Directory is set to `frontend`, not the project root.
-
-**Q: How do I update the deployed contract address?**
-
-A: Go to Vercel project settings → Environment Variables, modify `NEXT_PUBLIC_PACKAGE_ID`, then redeploy.
-
-**Q: Do I need server-side API keys?**
-
-A: No. Users configure their own API keys in the browser. The keys are stored in localStorage and never sent to our servers for storage.
+Set **Root Directory** to `frontend`
 
 ---
 
-## Smart Contract
+## What We're Building Toward
 
-The `DataVault` contract uses Sui's native features for maximum user control:
+MindVault today is step one. The vision:
 
-### Core Design
+- **TEE-based inference** — AI runs in secure enclaves, even we can't see your data
+- **Crypto payments** — No identity required, ever
+- **Fully trustless pipeline** — Verifiable from input to output
 
-- **Owned Objects**: DataVault is owned by the user, ensuring 100% control
-- **Dynamic Fields**: Authorization and blob references stored as dynamic fields
-- **Instant Revocation**: Users can revoke access anytime since auth data lives in their vault
-
-### Key Functions
-
-```move
-// Create a new vault
-public entry fun create_vault(clock: &Clock, ctx: &mut TxContext)
-
-// Store encrypted blob reference
-public entry fun store_blob(vault: &mut DataVault, blob_id: vector<u8>, blob_type: u8, iv: vector<u8>, ...)
-
-// Grant access to a provider (stores auth in user's vault)
-public entry fun grant_access(vault: &mut DataVault, provider: address, scope: u8, expires_at: u64, ...)
-
-// Revoke access (user can always do this unilaterally)
-public entry fun revoke_access(vault: &mut DataVault, provider: address, ...)
-
-// Check if provider is authorized (view function)
-public fun is_authorized(vault: &DataVault, provider: address, clock: &Clock): bool
-```
-
-### Deployed Contract (Testnet)
-
-- **Package ID**: `0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6`
-- **Transaction**: `AdH8tBSVJ87FRG8tPuG2NDSUtX9F4ExBwZ9SuDt5Q4M6`
-
-### Deploy Your Own
-
-```bash
-cd contracts/data_vault
-sui client publish --gas-budget 100000000
-```
+*Why not today?* TEE + LLM is experimental, performance overhead is significant, infrastructure isn't mature. But the direction is clear.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 15, TypeScript, Tailwind CSS |
-| Blockchain | Sui, Move 2024 |
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 15, TypeScript, Tailwind |
+| Blockchain | Sui (Move 2024) |
 | Storage | Walrus |
+| Encryption | AES-256-GCM, HKDF |
 | AI | Any OpenAI-compatible API |
-| Deployment | Vercel |
-
----
-
-## Project Structure
-
-```
-MindVault-VibeSui/
-├── contracts/
-│   └── data_vault/
-│       ├── Move.toml
-│       └── sources/
-│           └── data_vault.move    # Sui smart contract
-├── frontend/
-│   ├── src/
-│   │   ├── app/                   # Next.js pages
-│   │   │   ├── api/chat/          # AI chat API route
-│   │   │   ├── chat/              # Chat page
-│   │   │   ├── dashboard/         # Dashboard page
-│   │   │   └── settings/          # Settings page
-│   │   ├── components/            # React components
-│   │   ├── hooks/                 # Custom hooks
-│   │   └── lib/                   # Utilities (encryption, sui, walrus)
-│   └── package.json
-├── README.md
-└── AI_DISCLOSURE.md
-```
-
----
-
-## Security Model
-
-1. **Encryption Key**: Derived from wallet signature using HKDF, never stored on any server
-2. **Data at Rest**: AES-256-GCM encrypted on Walrus, only user can decrypt
-3. **Access Control**: On-chain authorization stored in user's vault, instant revocation
-4. **Processing**: Stateless serverless functions, no database, no logs, no persistence
-5. **API Keys**: User-provided, stored only in browser localStorage
-
----
-
-## License
-
-MIT License
 
 ---
 
 ## Links
 
-- [GitHub Repository](https://github.com/Azurboy/MindVault-VibeSui)
-- [Sui Documentation](https://docs.sui.io/)
-- [Walrus Documentation](https://docs.walrus.site/)
+- **[Live Demo](https://mind-vault-vibe-sui.vercel.app)**
+- [GitHub](https://github.com/Azurboy/MindVault-VibeSui)
+- [Sui Docs](https://docs.sui.io/) · [Walrus Docs](https://docs.walrus.site/)
 
 ---
 
 <a name="中文"></a>
 
-# MindVault: 隐私AI API网关
+# MindVault
 
-> **你的数据，你做主。**
-
-真正属于你的AI对话。客户端加密、去中心化存储、基于Sui区块链的访问控制。
+> **你的 AI 对话。你的加密密钥。你的规则。**
 
 ---
 
-## 作者思路
+## 问题
 
-### 为什么做 MindVault?
+每次你向 ChatGPT、Claude 或任何 AI 服务发送消息：
 
-当我们使用 ChatGPT、Claude 等 AI 服务时，有一个尴尬的事实：
-- 你的对话历史存储在厂商的服务器上
-- 你不知道谁在看你的数据，数据会不会被用于训练
-- 你无法真正删除或迁移你的数据
+- **与你的身份绑定** —— 邮箱、手机号、支付方式
+- **存储在他们的服务器上** —— 无限期，你无法控制
+- **可能用于训练** —— 你的思想成为他们的产品
+- **构建你的心理画像** —— 一次对话接一次
 
-MindVault 的初衷是解决一个问题：**谁应该拥有 AI 对话数据？**
+你不只是在提问。你在交出你的思维模式、商业机密、个人困扰和创意想法——全部与你的身份关联。
 
-我们的答案是：**用户自己。**
-
-### 诚实的声明
-
-我们相信透明。这是 MindVault 能做到和还做不到的：
-
-**我们能做到的：**
-- 对话数据加密存储，平台不持久化任何明文数据
-- 链上授权管理，完全透明可追溯
-- 用户可以导出、删除、迁移自己的数据
-- 无服务器处理，API 层不落盘
-
-**我们还做不到的：**
-- AI 推理时，明文仍然会发送给模型提供商（Claude/OpenAI等）
-- 这是当前 LLM 技术的限制，不是我们能绕过的
-
-### 未来方向
-
-我们正在研究下一代隐私 AI 技术：
-- **TEE（可信执行环境）**：在硬件安全区域运行 AI 推理，连运营者都看不到数据
-- **本地模型**：支持用户在本地运行开源模型，数据完全不出设备
-
-MindVault 的目标是成为**隐私 AI 基础设施**，随着技术演进，逐步实现真正的端到端隐私。
+**MindVault 的存在，是因为这不应该成为常态。**
 
 ---
 
-## 用户场景
+## 解决方案
 
-### 小明的 AI 助手烦恼
+MindVault 是一个隐私优先的 AI 聊天界面：
 
-小明是一名自由职业者，他经常用 AI 助手来：
-- 整理客户需求文档
-- 草拟合同和邮件
-- 头脑风暴产品创意
-
-但他有一个担忧：这些对话包含客户的敏感信息、商业创意、甚至私人想法。他不知道这些数据会被存储多久，会不会被用于训练，会不会被某个员工看到。
-
-### 小明发现了 MindVault
-
-使用 MindVault 后：
-
-1. **连接钱包**：小明用 Sui 钱包登录，不需要注册账号
-2. **对话加密存储**：每条消息都在他的浏览器里加密，然后存到去中心化存储
-3. **密钥在自己手里**：加密密钥从他的钱包签名派生，只有他能解密
-4. **随时可删除**：小明可以随时删除任何对话，不需要"申请"
-5. **完全可迁移**：如果有更好的服务，小明可以导出所有数据带走
-
-小明终于可以安心地和 AI 讨论敏感话题了——不是因为 AI 看不到（它还是能看到），而是因为这些数据**完全在他的掌控之中**，不会在某个服务器上永久留存。
+| 什么 | 如何实现 |
+|------|---------|
+| **消息被加密** | AES-256-GCM 加密在浏览器中完成，数据离开前已加密 |
+| **密钥在你手中** | 加密密钥从钱包签名派生——只有你能解密 |
+| **存储去中心化** | 加密数据存储在 Walrus，元数据在 Sui 区块链 |
+| **历史属于你** | 随时从任何设备加载过去的对话，用你的钱包 |
+| **证明在链上** | 防篡改的时间戳证明对话何时发生 |
 
 ---
 
-## 当前功能
+## 这是给谁用的？
 
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| 钱包连接 | 已上线 | 支持 Sui Wallet、Suiet 等 |
-| 客户端加密 | 已上线 | AES-256-GCM，密钥从钱包签名派生 |
-| 去中心化存储 | 已上线 | Walrus 测试网集成 |
-| 链上授权 | 已上线 | Sui 智能合约管理访问权限 |
-| 即时撤销 | 已上线 | 用户可单方面撤销任何授权 |
-| 自定义AI提供商 | 已上线 | 自带API密钥（OpenAI、Claude、DeepSeek等） |
-| 无状态处理 | 已上线 | API 层不持久化任何数据 |
-| **历史对话加载** | **已上线** | **从 Walrus 加载并解密历史对话** |
-| **对话存证验证** | **已上线** | **生成和验证对话真实性证明** |
-| 本地模型 | 计划中 | WebLLM / Ollama 支持 |
-| TEE 推理 | 研究中 | 硬件安全的 AI 处理 |
+### 注重隐私的专业人士
+
+**Sarah** 是一位创业公司创始人，她用 AI 来头脑风暴产品策略、起草投资人邮件、分析竞争对手。她的对话包含她绝不会公开分享的商业机密。
+
+*使用传统 AI 服务：* 她所有的战略思考都存储在 OpenAI 的服务器上，与她的公司邮箱绑定，可能用于训练，容易受到数据泄露的影响。
+
+*使用 MindVault：* 她的对话在离开浏览器前就被加密。即使 Walrus 被攻破，攻击者得到的只是无意义的密文。她可以证明她何时有了某个想法（用于知识产权纠纷），而不需要透露想法是什么。
 
 ---
 
-## 新功能：对话存证
+### 需要证明的研究者
 
-MindVault 现在支持**对话存证** - 证明对话在特定时间存储在链上的密码学证据。
+**陈博士** 正在通过 AI 辅助的头脑风暴记录一种新颖的研究方法。六个月后，一个竞争对手发表了类似的东西。
 
-### 为什么存证很重要
+*问题：* 截图可以伪造。服务器日志可以被篡改。你怎么证明你先想到的？
 
-- **真实性**：证明对话在特定时间发生
-- **防篡改**：链上时间戳无法伪造
-- **可验证**：任何人都可以验证，无需查看内容
-- **可移植**：导出并分享 JSON 格式的证明文件
+*使用 MindVault：* 每次对话都锚定到 Sui 区块链，带有精确的时间戳。陈博士导出一个密码学证明，显示她的加密对话在特定日期存在。她可以选择性地揭示内容来证明里面是什么。区块链不会说谎。
 
-### 如何使用
+---
 
-1. **导出存证**：点击任何加密消息旁边的"Proof"按钮
-2. **验证存证**：访问 `/verify` 页面并粘贴存证 JSON
-3. **分享**：将存证文件发送给需要验证的人
+### 想要掌控的用户
 
-### 验证内容
+**Alex** 只是不想让一家公司从他多年的 AI 对话中构建心理画像。他想使用 AI，但不想成为产品。
 
-- Vault 存在于 Sui 区块链上
-- Blob 存在于 Walrus 存储中
-- 时间戳有效
-- 交易（如提供）与存证匹配
+*使用 MindVault：*
+- 身份 = 钱包地址（匿名）
+- 当前对话 = 发送给 AI，但可以使用匿名 API 中转
+- 历史记录 = 加密，只有 Alex 能读取
+
+即使数据泄露，它也是**碎片化的、加密的、无法关联的**。破碎的画像比完整的画像好无限倍。
+
+---
+
+## 隐私级别
+
+选择你的权衡：
+
+| 设置 | 谁能看到你的数据？ |
+|------|-------------------|
+| MindVault + OpenAI/Claude API | 存储：只有你 / 推理：提供商看到当前消息 |
+| MindVault + 匿名 API 中转 | 存储：只有你 / 推理：无身份关联 |
+| MindVault + 本地模型 (Ollama) | 存储：只有你 / 推理：永不离开你的设备 |
+
+**关键洞察：** 将 MindVault 与匿名 API（加密货币支付，无需账号）配合使用，实现真正的端到端隐私。
+
+---
+
+## 架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     你的浏览器（信任区）                          │
+│  ┌───────────┐  ┌───────────┐  ┌─────────────────────────────┐  │
+│  │ Sui 钱包  │  │ AES-256   │  │ 密钥 = HKDF(钱包签名(...))  │  │
+│  │ （身份）  │  │ （加密）  │  │ （只有你有这个）            │  │
+│  └───────────┘  └───────────┘  └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+           ┌──────────────────┴──────────────────┐
+           ▼                                     ▼
+┌─────────────────────────┐       ┌─────────────────────────────┐
+│   冷存储（Web3）         │       │   热处理（无状态）           │
+│                         │       │                             │
+│  Sui: 元数据、证明       │       │  API 路由：调用 LLM，       │
+│  Walrus: 加密数据块      │       │  返回响应，然后遗忘         │
+│                         │       │                             │
+│  📌 这是你的。100%。    │       │  📌 我们短暂看到，          │
+│                         │       │     但从不存储。            │
+└─────────────────────────┘       └─────────────────────────────┘
+```
 
 ---
 
 ## 快速开始
 
-### 前置要求
-
-- Node.js 18+
-- Sui CLI（可选，用于合约部署）
-- Sui钱包（Sui Wallet、Suiet等）
-
-### 1. 克隆仓库
-
 ```bash
+# 克隆并安装
 git clone https://github.com/Azurboy/MindVault-VibeSui.git
-cd MindVault-VibeSui
-```
-
-### 2. 设置前端
-
-```bash
-cd frontend
+cd MindVault-VibeSui/frontend
 npm install
+
+# 配置
 cp .env.example .env.local
-```
+# 编辑 .env.local: NEXT_PUBLIC_PACKAGE_ID=0xd8e2b3...
 
-编辑 `.env.local`：
-```env
-NEXT_PUBLIC_PACKAGE_ID=0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6
-```
-
-### 3. 运行开发服务器
-
-```bash
+# 运行
 npm run dev
 ```
 
-在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
-
-### 4. 配置 AI 提供商
-
-1. 连接你的 Sui 钱包
-2. 进入 **Settings** 页面
-3. 配置你的 AI 提供商（baseURL、API密钥、模型）
-4. 开始聊天！
+然后：连接钱包 → 设置 → 添加你的 AI 提供商 → 开始聊天
 
 ---
 
-## Vercel 部署
-
-### 一键部署
+## 一键部署
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Azurboy/MindVault-VibeSui&root-directory=frontend&env=NEXT_PUBLIC_PACKAGE_ID)
 
-### 手动部署步骤
-
-1. Fork 本仓库到你的 GitHub 账号
-
-2. 在 Vercel 创建新项目
-   - 点击 "Add New" → "Project"
-   - 选择你 fork 的仓库
-
-3. **重要配置**：
-   - **Root Directory**: `frontend`
-   - **Framework Preset**: `Next.js`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `.next`
-
-4. 设置环境变量：
-
-   | 变量名 | 值 | 必需 |
-   |-------|---|-----|
-   | `NEXT_PUBLIC_PACKAGE_ID` | `0xd8e2b3...` | 是 |
-
-5. 点击 Deploy
-
-### 自定义 AI 提供商
-
-MindVault 支持用户在界面中自定义 AI 提供商，无需修改代码：
-
-```
-设置页面 → AI 提供商配置
-├── API Base URL: https://api.openai.com/v1  (或其他兼容的端点)
-├── API Key: sk-xxx... (存储在浏览器 localStorage)
-└── Model: gpt-4o / claude-sonnet-4-20250514 / deepseek-chat / ...
-```
-
-**支持的兼容端点：**
-- OpenAI API
-- Anthropic Claude API
-- Azure OpenAI
-- DeepSeek
-- Moonshot
-- 任何 OpenAI 兼容的 API（如本地 Ollama）
+将 **Root Directory** 设置为 `frontend`
 
 ---
 
-## 智能合约
+## 我们正在构建的未来
 
-`DataVault` 合约使用 Sui 的原生特性：
+今天的 MindVault 是第一步。愿景：
 
-- **拥有对象**：DataVault 由用户拥有，确保100%控制权
-- **动态字段**：授权和数据块引用存储为动态字段
-- **即时撤销**：用户可以随时撤销访问权限，因为授权数据存储在用户的 vault 中
+- **基于 TEE 的推理** —— AI 在安全飞地中运行，即使我们也看不到你的数据
+- **加密货币支付** —— 永远不需要身份
+- **完全无需信任的流程** —— 从输入到输出都可验证
 
-### 已部署合约（测试网）
-
-- **Package ID**: `0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6`
-- **交易哈希**: `AdH8tBSVJ87FRG8tPuG2NDSUtX9F4ExBwZ9SuDt5Q4M6`
+*为什么现在做不到？* TEE + LLM 还在实验阶段，性能开销显著，基础设施不成熟。但方向是明确的。
 
 ---
 
@@ -592,32 +328,16 @@ MindVault 支持用户在界面中自定义 AI 提供商，无需修改代码：
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | Next.js 15, TypeScript, Tailwind CSS |
-| 区块链 | Sui, Move 2024 |
+| 前端 | Next.js 15, TypeScript, Tailwind |
+| 区块链 | Sui (Move 2024) |
 | 存储 | Walrus |
+| 加密 | AES-256-GCM, HKDF |
 | AI | 任何 OpenAI 兼容的 API |
-| 部署 | Vercel |
-
----
-
-## 安全模型
-
-1. **加密密钥**：通过 HKDF 从钱包签名派生，从不存储在任何服务器
-2. **静态数据**：在 Walrus 上使用 AES-256-GCM 加密，只有用户能解密
-3. **访问控制**：链上授权存储在用户的 vault 中，即时撤销
-4. **处理过程**：无状态无服务器函数，无数据库，无日志，无持久化
-5. **API密钥**：用户自己提供，只存储在浏览器 localStorage
-
----
-
-## 许可证
-
-MIT License
 
 ---
 
 ## 链接
 
-- [GitHub仓库](https://github.com/Azurboy/MindVault-VibeSui)
-- [Sui文档](https://docs.sui.io/)
-- [Walrus文档](https://docs.walrus.site/)
+- **[在线体验](https://mind-vault-vibe-sui.vercel.app)**
+- [GitHub](https://github.com/Azurboy/MindVault-VibeSui)
+- [Sui 文档](https://docs.sui.io/) · [Walrus 文档](https://docs.walrus.site/)
