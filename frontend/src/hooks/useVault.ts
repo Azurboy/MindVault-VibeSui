@@ -9,13 +9,28 @@ import {
   buildRevokeAccessTx,
   getUserVaults,
   getVaultDetails,
+  getAllBlobRefs,
+  BlobRefData,
 } from "@/lib/sui";
+import { downloadFromWalrus } from "@/lib/walrus";
 
 export interface VaultInfo {
   objectId: string;
   blobCount: number;
   createdAt: number;
   owner?: string;
+}
+
+/**
+ * Stored message structure - matches what we encrypt and store
+ */
+export interface StoredMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+  blobIndex?: number;
+  blobId?: string;
+  chainTimestamp?: number;
 }
 
 export function useVault() {
@@ -182,6 +197,79 @@ export function useVault() {
     [currentVault, signAndExecute]
   );
 
+  // Load chat history from Walrus
+  const loadHistory = useCallback(
+    async (
+      decrypt: (ciphertext: Uint8Array, iv: Uint8Array) => Promise<string>
+    ): Promise<StoredMessage[]> => {
+      if (!currentVault) {
+        return [];
+      }
+
+      try {
+        // Get all blob references from chain
+        const blobRefs = await getAllBlobRefs(currentVault.objectId);
+
+        if (blobRefs.length === 0) {
+          return [];
+        }
+
+        const messages: StoredMessage[] = [];
+
+        // Download and decrypt each blob
+        for (const ref of blobRefs) {
+          try {
+            // Download encrypted data from Walrus
+            const encryptedData = await downloadFromWalrus(ref.blobId);
+
+            // Decrypt the data
+            const decrypted = await decrypt(encryptedData, ref.iv);
+
+            // Parse the message
+            try {
+              const parsed = JSON.parse(decrypted) as StoredMessage;
+              messages.push({
+                ...parsed,
+                blobIndex: ref.index,
+                blobId: ref.blobId,
+                chainTimestamp: ref.createdAt,
+              });
+            } catch {
+              // If not JSON, treat as plain text (legacy format)
+              messages.push({
+                role: "user",
+                content: decrypted,
+                timestamp: ref.createdAt,
+                blobIndex: ref.index,
+                blobId: ref.blobId,
+                chainTimestamp: ref.createdAt,
+              });
+            }
+          } catch (err) {
+            console.error(`Failed to load blob ${ref.index}:`, err);
+          }
+        }
+
+        // Sort by timestamp
+        messages.sort((a, b) => a.timestamp - b.timestamp);
+
+        return messages;
+      } catch (err) {
+        console.error("Failed to load history:", err);
+        return [];
+      }
+    },
+    [currentVault]
+  );
+
+  // Get blob references (for proof generation)
+  const getBlobRefs = useCallback(async (): Promise<BlobRefData[]> => {
+    if (!currentVault) {
+      return [];
+    }
+    return getAllBlobRefs(currentVault.objectId);
+  }, [currentVault]);
+
   return {
     vaults,
     currentVault,
@@ -193,5 +281,7 @@ export function useVault() {
     storeBlob,
     grantAccess,
     revokeAccess,
+    loadHistory,
+    getBlobRefs,
   };
 }

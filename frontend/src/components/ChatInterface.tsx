@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Lock, AlertCircle, Settings } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Bot, User, Loader2, Lock, AlertCircle, Settings, Download, History, RefreshCw } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useEncryption } from "@/hooks/useEncryption";
-import { useVault } from "@/hooks/useVault";
+import { useVault, StoredMessage } from "@/hooks/useVault";
 import { uploadToWalrus } from "@/lib/walrus";
+import { generateProof, downloadProof } from "@/lib/proof";
 import Link from "next/link";
 
 interface Message {
@@ -14,6 +15,9 @@ interface Message {
   content: string;
   timestamp: Date;
   encrypted?: boolean;
+  blobIndex?: number;
+  blobId?: string;
+  chainTimestamp?: number;
 }
 
 interface AIProviderConfig {
@@ -30,11 +34,13 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [saveToWalrus, setSaveToWalrus] = useState(true);
   const [providerConfig, setProviderConfig] = useState<AIProviderConfig | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const account = useCurrentAccount();
-  const { encrypt, isInitialized, initialize, isInitializing } = useEncryption();
-  const { currentVault, storeBlob } = useVault();
+  const { encrypt, decrypt, isInitialized, initialize, isInitializing } = useEncryption();
+  const { currentVault, storeBlob, loadHistory } = useVault();
 
   // Load provider config from localStorage
   useEffect(() => {
@@ -63,6 +69,67 @@ export function ChatInterface() {
     }
   }, [account, isInitialized, isInitializing, initialize]);
 
+  // Load history when vault and encryption are ready
+  const handleLoadHistory = useCallback(async () => {
+    if (!currentVault || !isInitialized || isLoadingHistory) return;
+
+    setIsLoadingHistory(true);
+    try {
+      const history = await loadHistory(decrypt);
+
+      if (history.length > 0) {
+        const loadedMessages: Message[] = history.map((msg: StoredMessage) => ({
+          id: crypto.randomUUID(),
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          encrypted: true,
+          blobIndex: msg.blobIndex,
+          blobId: msg.blobId,
+          chainTimestamp: msg.chainTimestamp,
+        }));
+
+        setMessages(loadedMessages);
+        setHistoryLoaded(true);
+      }
+    } catch (err) {
+      console.error("Failed to load history:", err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [currentVault, isInitialized, isLoadingHistory, loadHistory, decrypt]);
+
+  // Auto-load history when vault and encryption are ready (only once)
+  useEffect(() => {
+    if (currentVault && isInitialized && !historyLoaded && !isLoadingHistory && messages.length === 0) {
+      handleLoadHistory();
+    }
+  }, [currentVault, isInitialized, historyLoaded, isLoadingHistory, messages.length, handleLoadHistory]);
+
+  // Export proof for a message
+  const handleExportProof = async (message: Message) => {
+    if (!currentVault || !message.blobId || message.blobIndex === undefined) {
+      alert("Cannot export proof: message not stored on chain");
+      return;
+    }
+
+    try {
+      const proof = await generateProof({
+        vaultId: currentVault.objectId,
+        vaultOwner: currentVault.owner || "",
+        blobIndex: message.blobIndex,
+        blobId: message.blobId,
+        chainTimestamp: message.chainTimestamp || message.timestamp.getTime(),
+        content: message.content,
+      });
+
+      downloadProof(proof);
+    } catch (err) {
+      console.error("Failed to export proof:", err);
+      alert("Failed to export proof");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading || !providerConfig) return;
@@ -82,24 +149,33 @@ export function ChatInterface() {
       // Save to Walrus if enabled and vault exists
       if (saveToWalrus && currentVault && isInitialized) {
         try {
-          const { ciphertext, iv } = await encrypt(input);
+          // Store as structured message
+          const messageToStore: StoredMessage = {
+            role: "user",
+            content: input,
+            timestamp: Date.now(),
+          };
+          const { ciphertext, iv } = await encrypt(JSON.stringify(messageToStore));
           const result = await uploadToWalrus(ciphertext);
           const blobIdBytes = new TextEncoder().encode(result.blobId);
           await storeBlob(blobIdBytes, 0, iv);
           userMessage.encrypted = true;
+          userMessage.blobId = result.blobId;
+          userMessage.blobIndex = currentVault.blobCount;
+          userMessage.chainTimestamp = Date.now();
         } catch (err) {
           console.error("Failed to save to Walrus:", err);
         }
       }
 
-      // Call AI API with user's provider config
+      // Call AI API with user's provider config - send full history as context
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: input,
           provider: providerConfig,
-          history: messages.slice(-10).map((m) => ({
+          history: messages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -125,11 +201,20 @@ export function ChatInterface() {
       // Save assistant response to Walrus
       if (saveToWalrus && currentVault && isInitialized) {
         try {
-          const { ciphertext, iv } = await encrypt(data.response);
+          // Store as structured message
+          const messageToStore: StoredMessage = {
+            role: "assistant",
+            content: data.response,
+            timestamp: Date.now(),
+          };
+          const { ciphertext, iv } = await encrypt(JSON.stringify(messageToStore));
           const result = await uploadToWalrus(ciphertext);
           const blobIdBytes = new TextEncoder().encode(result.blobId);
           await storeBlob(blobIdBytes, 0, iv);
           assistantMessage.encrypted = true;
+          assistantMessage.blobId = result.blobId;
+          assistantMessage.blobIndex = currentVault.blobCount;
+          assistantMessage.chainTimestamp = Date.now();
         } catch (err) {
           console.error("Failed to save response to Walrus:", err);
         }
@@ -202,7 +287,24 @@ export function ChatInterface() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {/* Load History Button */}
+          {currentVault && isInitialized && (
+            <button
+              onClick={handleLoadHistory}
+              disabled={isLoadingHistory}
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              title="Load chat history from Walrus"
+            >
+              {isLoadingHistory ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <History className="w-4 h-4" />
+              )}
+              {isLoadingHistory ? "Loading..." : "Load History"}
+            </button>
+          )}
+
           <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
             <input
               type="checkbox"
@@ -244,7 +346,17 @@ export function ChatInterface() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
+        {isLoadingHistory && messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <Loader2 className="w-12 h-12 mb-4 animate-spin text-blue-500" />
+            <h3 className="text-lg font-medium mb-2">Loading Chat History</h3>
+            <p className="text-sm text-center max-w-md">
+              Decrypting your conversation history from Walrus...
+            </p>
+          </div>
+        )}
+
+        {!isLoadingHistory && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <Bot className="w-16 h-16 mb-4" />
             <h3 className="text-lg font-medium mb-2">Start a Private Conversation</h3>
@@ -252,6 +364,11 @@ export function ChatInterface() {
               Your messages are encrypted client-side before being stored.
               Only you can decrypt and read your conversation history.
             </p>
+            {historyLoaded && currentVault && currentVault.blobCount > 0 && (
+              <p className="text-sm text-center max-w-md mt-2 text-blue-400">
+                {currentVault.blobCount} encrypted messages found. Click &quot;Load History&quot; to view.
+              </p>
+            )}
             {!providerConfig && (
               <Link
                 href="/settings"
@@ -297,6 +414,16 @@ export function ChatInterface() {
                     <Lock className="w-3 h-3" />
                     Encrypted
                   </span>
+                )}
+                {message.blobId && (
+                  <button
+                    onClick={() => handleExportProof(message)}
+                    className="flex items-center gap-1 hover:opacity-100 opacity-60 transition-opacity"
+                    title="Export proof of this message"
+                  >
+                    <Download className="w-3 h-3" />
+                    Proof
+                  </button>
                 )}
               </div>
             </div>

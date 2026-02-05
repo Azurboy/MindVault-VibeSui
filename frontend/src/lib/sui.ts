@@ -206,3 +206,143 @@ export async function getVaultDetails(vaultId: string): Promise<{
     return null;
   }
 }
+
+/**
+ * BlobRef data structure from dynamic fields
+ */
+export interface BlobRefData {
+  index: number;
+  blobId: string;
+  blobType: number;
+  iv: Uint8Array;
+  createdAt: number;
+}
+
+/**
+ * Get all blob references from a vault's dynamic fields
+ */
+export async function getAllBlobRefs(vaultId: string): Promise<BlobRefData[]> {
+  const blobRefs: BlobRefData[] = [];
+
+  try {
+    // Get vault details to know how many blobs exist
+    const vault = await getVaultDetails(vaultId);
+    if (!vault || vault.blobCount === 0) {
+      return [];
+    }
+
+    // Query dynamic fields for the vault
+    let cursor: string | null = null;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const response = await suiClient.getDynamicFields({
+        parentId: vaultId,
+        cursor,
+        limit: 50,
+      });
+
+      for (const field of response.data) {
+        // Check if this is a BlobKey dynamic field
+        if (field.name.type.includes("BlobKey")) {
+          try {
+            // Get the full dynamic field object
+            const fieldObject = await suiClient.getDynamicFieldObject({
+              parentId: vaultId,
+              name: field.name,
+            });
+
+            if (fieldObject.data?.content?.dataType === "moveObject") {
+              const content = fieldObject.data.content as unknown as {
+                fields: {
+                  name: { fields: { index: string } };
+                  value: {
+                    fields: {
+                      blob_id: number[];
+                      blob_type: string;
+                      iv: number[];
+                      created_at: string;
+                    };
+                  };
+                };
+              };
+
+              const blobIdBytes = new Uint8Array(content.fields.value.fields.blob_id);
+              const blobIdStr = new TextDecoder().decode(blobIdBytes);
+
+              blobRefs.push({
+                index: parseInt(content.fields.name.fields.index),
+                blobId: blobIdStr,
+                blobType: parseInt(content.fields.value.fields.blob_type),
+                iv: new Uint8Array(content.fields.value.fields.iv),
+                createdAt: parseInt(content.fields.value.fields.created_at),
+              });
+            }
+          } catch (err) {
+            console.error(`Failed to fetch blob ref for field:`, err);
+          }
+        }
+      }
+
+      hasNextPage = response.hasNextPage;
+      cursor = response.nextCursor ?? null;
+    }
+
+    // Sort by index
+    blobRefs.sort((a, b) => a.index - b.index);
+
+    return blobRefs;
+  } catch (err) {
+    console.error("Failed to get blob refs:", err);
+    return [];
+  }
+}
+
+/**
+ * Get a single blob reference by index
+ */
+export async function getBlobRef(
+  vaultId: string,
+  index: number
+): Promise<BlobRefData | null> {
+  try {
+    const fieldObject = await suiClient.getDynamicFieldObject({
+      parentId: vaultId,
+      name: {
+        type: `${PACKAGE_ID}::${MODULE_NAME}::BlobKey`,
+        value: { index: index.toString() },
+      },
+    });
+
+    if (fieldObject.data?.content?.dataType === "moveObject") {
+      const content = fieldObject.data.content as unknown as {
+        fields: {
+          name: { fields: { index: string } };
+          value: {
+            fields: {
+              blob_id: number[];
+              blob_type: string;
+              iv: number[];
+              created_at: string;
+            };
+          };
+        };
+      };
+
+      const blobIdBytes = new Uint8Array(content.fields.value.fields.blob_id);
+      const blobIdStr = new TextDecoder().decode(blobIdBytes);
+
+      return {
+        index: parseInt(content.fields.name.fields.index),
+        blobId: blobIdStr,
+        blobType: parseInt(content.fields.value.fields.blob_type),
+        iv: new Uint8Array(content.fields.value.fields.iv),
+        createdAt: parseInt(content.fields.value.fields.created_at),
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}

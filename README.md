@@ -86,8 +86,36 @@ Alex can finally discuss sensitive topics with AI confidently - not because the 
 | Instant Revocation | Live | User can unilaterally revoke any authorization |
 | Custom AI Providers | Live | Bring your own API key (OpenAI, Claude, DeepSeek, etc.) |
 | Stateless Processing | Live | API layer never persists any data |
+| **Chat History Loading** | **Live** | **Load and decrypt past conversations from Walrus** |
+| **Proof Verification** | **Live** | **Generate and verify conversation authenticity proofs** |
 | Local Models | Planned | WebLLM / Ollama support |
 | TEE Inference | Research | Hardware-secured AI processing |
+
+---
+
+## New: Conversation Proofs
+
+MindVault now supports **conversation proofs** - cryptographic evidence that a conversation was stored on-chain at a specific time.
+
+### Why Proofs Matter
+
+- **Authenticity**: Prove a conversation happened at a specific time
+- **Tamper-proof**: On-chain timestamps cannot be forged
+- **Verifiable**: Anyone can verify without seeing the content
+- **Portable**: Export and share proofs as JSON files
+
+### How to Use
+
+1. **Export a Proof**: Click the "Proof" button on any encrypted message
+2. **Verify a Proof**: Go to `/verify` and paste the proof JSON
+3. **Share**: Send the proof file to anyone who needs to verify
+
+### What's Verified
+
+- Vault exists on Sui blockchain
+- Blob exists on Walrus storage
+- Timestamp is valid
+- Transaction (if provided) matches the proof
 
 ---
 
@@ -418,8 +446,36 @@ MindVault 的目标是成为**隐私 AI 基础设施**，随着技术演进，�
 | 即时撤销 | 已上线 | 用户可单方面撤销任何授权 |
 | 自定义AI提供商 | 已上线 | 自带API密钥（OpenAI、Claude、DeepSeek等） |
 | 无状态处理 | 已上线 | API 层不持久化任何数据 |
+| **历史对话加载** | **已上线** | **从 Walrus 加载并解密历史对话** |
+| **对话存证验证** | **已上线** | **生成和验证对话真实性证明** |
 | 本地模型 | 计划中 | WebLLM / Ollama 支持 |
 | TEE 推理 | 研究中 | 硬件安全的 AI 处理 |
+
+---
+
+## 新功能：对话存证
+
+MindVault 现在支持**对话存证** - 证明对话在特定时间存储在链上的密码学证据。
+
+### 为什么存证很重要
+
+- **真实性**：证明对话在特定时间发生
+- **防篡改**：链上时间戳无法伪造
+- **可验证**：任何人都可以验证，无需查看内容
+- **可移植**：导出并分享 JSON 格式的证明文件
+
+### 如何使用
+
+1. **导出存证**：点击任何加密消息旁边的"Proof"按钮
+2. **验证存证**：访问 `/verify` 页面并粘贴存证 JSON
+3. **分享**：将存证文件发送给需要验证的人
+
+### 验证内容
+
+- Vault 存在于 Sui 区块链上
+- Blob 存在于 Walrus 存储中
+- 时间戳有效
+- 交易（如提供）与存证匹配
 
 ---
 

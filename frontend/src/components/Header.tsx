@@ -3,7 +3,7 @@
 import { ConnectButton } from "@mysten/dapp-kit";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, MessageSquare, Settings, LayoutDashboard } from "lucide-react";
+import { Shield, MessageSquare, Settings, LayoutDashboard, CheckCircle } from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export function Header() {
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/chat", label: "Chat", icon: MessageSquare },
+    { href: "/verify", label: "Verify", icon: CheckCircle },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
