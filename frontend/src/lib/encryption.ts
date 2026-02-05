@@ -5,21 +5,76 @@
  * The encryption key never leaves the browser - only the user can decrypt their data.
  */
 
+// Session storage key for caching the signature
+const SIGNATURE_CACHE_KEY = "mindvault_sig_cache";
+
 export class EncryptionService {
   private key: CryptoKey | null = null;
   private initialized = false;
+  private currentAddress: string | null = null;
+
+  /**
+   * Try to restore key from cached signature
+   */
+  async tryRestoreFromCache(address: string): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+
+    try {
+      const cached = sessionStorage.getItem(SIGNATURE_CACHE_KEY);
+      if (!cached) return false;
+
+      const { addr, sig } = JSON.parse(cached);
+
+      // Only use cache if it's for the same address
+      if (addr !== address) {
+        sessionStorage.removeItem(SIGNATURE_CACHE_KEY);
+        return false;
+      }
+
+      // Restore key from cached signature
+      const signature = Uint8Array.from(atob(sig), c => c.charCodeAt(0));
+      await this.deriveKeyFromSignature(signature);
+      this.currentAddress = address;
+      return true;
+    } catch {
+      sessionStorage.removeItem(SIGNATURE_CACHE_KEY);
+      return false;
+    }
+  }
 
   /**
    * Derive encryption key from wallet signature
    * Uses HKDF to derive a deterministic AES-256 key from the wallet's signature
    */
   async deriveKeyFromWallet(
-    signMessage: (message: Uint8Array) => Promise<{ signature: Uint8Array }>
+    signMessage: (message: Uint8Array) => Promise<{ signature: Uint8Array }>,
+    address?: string
   ): Promise<void> {
     // 1. Sign a fixed message to get deterministic key material
     const message = new TextEncoder().encode("mindvault-encryption-key-v1");
     const { signature } = await signMessage(message);
 
+    // Cache the signature in sessionStorage for this session
+    if (typeof window !== "undefined" && address) {
+      try {
+        const sigBase64 = btoa(String.fromCharCode(...signature));
+        sessionStorage.setItem(SIGNATURE_CACHE_KEY, JSON.stringify({
+          addr: address,
+          sig: sigBase64,
+        }));
+        this.currentAddress = address;
+      } catch {
+        // Ignore storage errors
+      }
+    }
+
+    await this.deriveKeyFromSignature(signature);
+  }
+
+  /**
+   * Internal: derive key from signature bytes
+   */
+  private async deriveKeyFromSignature(signature: Uint8Array): Promise<void> {
     // 2. Import signature as key material for HKDF
     // Create a new ArrayBuffer to ensure compatibility
     const signatureBuffer = new ArrayBuffer(signature.length);
@@ -123,6 +178,11 @@ export class EncryptionService {
   clear(): void {
     this.key = null;
     this.initialized = false;
+    this.currentAddress = null;
+    // Also clear the cached signature
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(SIGNATURE_CACHE_KEY);
+    }
   }
 }
 

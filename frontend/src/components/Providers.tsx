@@ -12,11 +12,23 @@ const { networkConfig } = createNetworkConfig({
 
 const queryClient = new QueryClient();
 
+// Custom storage that works in both SSR and client
+const getStorage = () => {
+  if (typeof window !== "undefined") {
+    return localStorage;
+  }
+  return undefined;
+};
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-        <WalletProvider autoConnect>
+        <WalletProvider
+          autoConnect={true}
+          storage={getStorage()}
+          storageKey="mindvault-wallet-connection"
+        >
           {children}
         </WalletProvider>
       </SuiClientProvider>

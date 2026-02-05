@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { getEncryptionService, EncryptionService } from "@/lib/encryption";
+import { getEncryptionService } from "@/lib/encryption";
 import { useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
 
 export function useEncryption() {
@@ -14,10 +14,33 @@ export function useEncryption() {
 
   const encryptionService = getEncryptionService();
 
-  // Check initialization status
+  // Check initialization status and try to restore from cache
   useEffect(() => {
-    setIsInitialized(encryptionService.isInitialized());
-  }, [encryptionService]);
+    const checkAndRestore = async () => {
+      // Already initialized
+      if (encryptionService.isInitialized()) {
+        setIsInitialized(true);
+        return;
+      }
+
+      // Try to restore from session cache if wallet is connected
+      if (account?.address) {
+        setIsInitializing(true);
+        try {
+          const restored = await encryptionService.tryRestoreFromCache(account.address);
+          if (restored) {
+            setIsInitialized(true);
+          }
+        } catch {
+          // Ignore restore errors
+        } finally {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    checkAndRestore();
+  }, [encryptionService, account?.address]);
 
   // Initialize encryption when wallet connects
   const initialize = useCallback(async () => {
@@ -41,7 +64,7 @@ export function useEncryption() {
         // Convert base64 signature to Uint8Array
         const signature = Uint8Array.from(atob(result.signature), c => c.charCodeAt(0));
         return { signature };
-      });
+      }, account.address);
 
       setIsInitialized(true);
       return true;
