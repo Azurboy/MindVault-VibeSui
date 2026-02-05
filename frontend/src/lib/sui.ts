@@ -10,7 +10,18 @@ export const NETWORK = "testnet";
 export const SUI_FULLNODE_URL = getJsonRpcFullnodeUrl(NETWORK);
 
 // Contract configuration - Update after deployment
-export const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID || "0x0";
+// IMPORTANT: Set NEXT_PUBLIC_PACKAGE_ID in Vercel environment variables
+const _packageId = process.env.NEXT_PUBLIC_PACKAGE_ID;
+
+if (!_packageId || _packageId === "0x0" || _packageId.length < 10) {
+  console.error(
+    "CRITICAL: NEXT_PUBLIC_PACKAGE_ID is not set or invalid. " +
+    "Please set it in Vercel Environment Variables. " +
+    "Current value:", _packageId
+  );
+}
+
+export const PACKAGE_ID = _packageId || "0xd8e2b3eeeeacbf0f42c0be6c86cc4a95b0a86b884c63678d13fc055afc3d82a6";
 export const MODULE_NAME = "data_vault";
 
 // Create Sui client
