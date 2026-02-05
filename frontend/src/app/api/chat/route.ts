@@ -5,41 +5,44 @@
  * 1. READ: Receive decrypted plaintext from frontend
  * 2. PROCESS: Call LLM for inference
  * 3. FORGET: Request ends, memory released, no disk persistence
+ *
+ * Supports custom AI providers via OpenAI-compatible protocol.
+ * User provides their own baseURL, apiKey, and model.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-
-// Lazy initialization of OpenAI client
-let openaiClient: OpenAI | null = null;
-
-function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error("OpenAI API key not configured");
-    }
-    openaiClient = new OpenAI({ apiKey });
-  }
-  return openaiClient;
-}
-
-// Anthropic API configuration
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
+interface AIProviderConfig {
+  baseURL: string;
+  apiKey: string;
+  model: string;
+}
+
 interface ChatRequest {
   message: string;
-  provider: "openai" | "claude";
+  provider: AIProviderConfig;
   history?: ChatMessage[];
 }
 
-async function callOpenAI(message: string, history: ChatMessage[] = []): Promise<string> {
-  const openai = getOpenAIClient();
+/**
+ * Call any OpenAI-compatible API
+ * Most AI providers (OpenAI, DeepSeek, Moonshot, local Ollama) use this format
+ */
+async function callOpenAICompatible(
+  config: AIProviderConfig,
+  message: string,
+  history: ChatMessage[] = []
+): Promise<string> {
+  const client = new OpenAI({
+    baseURL: config.baseURL,
+    apiKey: config.apiKey,
+  });
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     {
@@ -53,21 +56,23 @@ async function callOpenAI(message: string, history: ChatMessage[] = []): Promise
     { role: "user", content: message },
   ];
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+  const completion = await client.chat.completions.create({
+    model: config.model,
     messages,
-    max_tokens: 1024,
+    max_tokens: 2048,
   });
 
   return completion.choices[0]?.message?.content || "No response generated.";
 }
 
-async function callClaude(message: string, history: ChatMessage[] = []): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error("Anthropic API key not configured");
-  }
-
+/**
+ * Call Anthropic Claude API (different format from OpenAI)
+ */
+async function callClaude(
+  config: AIProviderConfig,
+  message: string,
+  history: ChatMessage[] = []
+): Promise<string> {
   const messages = [
     ...history.map((m) => ({
       role: m.role,
@@ -76,16 +81,16 @@ async function callClaude(message: string, history: ChatMessage[] = []): Promise
     { role: "user", content: message },
   ];
 
-  const response = await fetch(ANTHROPIC_API_URL, {
+  const response = await fetch(`${config.baseURL}/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": apiKey,
+      "x-api-key": config.apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
+      model: config.model,
+      max_tokens: 2048,
       messages,
     }),
   });
@@ -97,6 +102,13 @@ async function callClaude(message: string, history: ChatMessage[] = []): Promise
 
   const data = await response.json();
   return data.content[0]?.text || "No response generated.";
+}
+
+/**
+ * Detect if this is an Anthropic Claude endpoint
+ */
+function isClaudeEndpoint(baseURL: string): boolean {
+  return baseURL.includes("anthropic.com");
 }
 
 export async function POST(request: NextRequest) {
@@ -112,19 +124,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. PROCESS: Call appropriate LLM
+    if (!provider || !provider.baseURL || !provider.apiKey || !provider.model) {
+      return NextResponse.json(
+        { error: "AI provider configuration is required (baseURL, apiKey, model)" },
+        { status: 400 }
+      );
+    }
+
+    // 2. PROCESS: Call appropriate LLM based on endpoint type
     let response: string;
 
-    if (provider === "claude") {
-      response = await callClaude(message, history);
+    if (isClaudeEndpoint(provider.baseURL)) {
+      // Use Anthropic-specific API format
+      response = await callClaude(provider, message, history);
     } else {
-      response = await callOpenAI(message, history);
+      // Use OpenAI-compatible format (works for OpenAI, DeepSeek, Moonshot, Ollama, etc.)
+      response = await callOpenAICompatible(provider, message, history);
     }
 
     // 3. FORGET: Return response
-    // After this function returns, all local variables (message, response, history)
+    // After this function returns, all local variables (message, response, history, provider)
     // are garbage collected. Serverless functions have no persistent storage.
     // No database writes, no log persistence, no cache storage.
+    // The API key is used only for this request and never stored.
 
     return NextResponse.json({ response });
   } catch (error) {

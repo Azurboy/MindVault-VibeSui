@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Lock, AlertCircle } from "lucide-react";
+import { Send, Bot, User, Loader2, Lock, AlertCircle, Settings } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useEncryption } from "@/hooks/useEncryption";
 import { useVault } from "@/hooks/useVault";
 import { uploadToWalrus } from "@/lib/walrus";
-import { toBase64 } from "@/lib/encryption";
+import Link from "next/link";
 
 interface Message {
   id: string;
@@ -16,19 +16,40 @@ interface Message {
   encrypted?: boolean;
 }
 
-type Provider = "openai" | "claude";
+interface AIProviderConfig {
+  baseURL: string;
+  apiKey: string;
+  model: string;
+}
+
+const STORAGE_KEY = "mindvault_ai_provider";
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [provider, setProvider] = useState<Provider>("openai");
   const [saveToWalrus, setSaveToWalrus] = useState(true);
+  const [providerConfig, setProviderConfig] = useState<AIProviderConfig | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const account = useCurrentAccount();
   const { encrypt, isInitialized, initialize, isInitializing } = useEncryption();
   const { currentVault, storeBlob } = useVault();
+
+  // Load provider config from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.baseURL && parsed.apiKey && parsed.model) {
+          setProviderConfig(parsed);
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -44,7 +65,7 @@ export function ChatInterface() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !providerConfig) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -71,13 +92,13 @@ export function ChatInterface() {
         }
       }
 
-      // Call AI API
+      // Call AI API with user's provider config
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: input,
-          provider,
+          provider: providerConfig,
           history: messages.slice(-10).map((m) => ({
             role: m.role,
             content: m.content,
@@ -86,7 +107,8 @@ export function ChatInterface() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get response");
+        const data = await response.json();
+        throw new Error(data.error || "Failed to get response");
       }
 
       const data = await response.json();
@@ -116,7 +138,7 @@ export function ChatInterface() {
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
+        content: error instanceof Error ? `Error: ${error.message}` : "Sorry, I encountered an error. Please try again.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -135,34 +157,49 @@ export function ChatInterface() {
     );
   }
 
+  // Get provider display name
+  const getProviderName = () => {
+    if (!providerConfig) return null;
+    if (providerConfig.baseURL.includes("openai.com")) return "OpenAI";
+    if (providerConfig.baseURL.includes("anthropic.com")) return "Claude";
+    if (providerConfig.baseURL.includes("deepseek.com")) return "DeepSeek";
+    if (providerConfig.baseURL.includes("localhost")) return "Local";
+    return "Custom";
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
-      {/* Provider Selection */}
+      {/* Provider Status Bar */}
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">AI Provider:</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setProvider("openai")}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                provider === "openai"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-              }`}
-            >
-              OpenAI
-            </button>
-            <button
-              onClick={() => setProvider("claude")}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                provider === "claude"
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-              }`}
-            >
-              Claude
-            </button>
-          </div>
+          {providerConfig ? (
+            <>
+              <span className="text-sm text-gray-400">AI Provider:</span>
+              <span className="px-3 py-1.5 rounded-lg text-sm bg-green-600/20 text-green-400 border border-green-600/50">
+                {getProviderName()} - {providerConfig.model}
+              </span>
+              <Link
+                href="/settings"
+                className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+              >
+                <Settings className="w-4 h-4" />
+                Change
+              </Link>
+            </>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1.5 rounded-lg text-sm bg-yellow-600/20 text-yellow-400 border border-yellow-600/50">
+                No AI provider configured
+              </span>
+              <Link
+                href="/settings"
+                className="px-3 py-1.5 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Configure
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -178,6 +215,20 @@ export function ChatInterface() {
           </label>
         </div>
       </div>
+
+      {/* No Provider Warning */}
+      {!providerConfig && (
+        <div className="flex items-center gap-2 p-3 bg-yellow-900/20 border-b border-yellow-800 text-yellow-400 text-sm">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Please configure your AI provider in{" "}
+            <Link href="/settings" className="underline hover:text-yellow-300">
+              Settings
+            </Link>{" "}
+            to start chatting. You&apos;ll need to provide your own API key.
+          </span>
+        </div>
+      )}
 
       {/* Encryption Status */}
       {!isInitialized && (
@@ -201,6 +252,15 @@ export function ChatInterface() {
               Your messages are encrypted client-side before being stored.
               Only you can decrypt and read your conversation history.
             </p>
+            {!providerConfig && (
+              <Link
+                href="/settings"
+                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Configure AI Provider
+              </Link>
+            )}
           </div>
         )}
 
@@ -270,13 +330,13 @@ export function ChatInterface() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
+            placeholder={providerConfig ? "Type your message..." : "Configure AI provider in Settings first..."}
             className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-            disabled={isLoading}
+            disabled={isLoading || !providerConfig}
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || !input.trim() || !providerConfig}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl px-6 py-3 transition-colors flex items-center gap-2"
           >
             {isLoading ? (
