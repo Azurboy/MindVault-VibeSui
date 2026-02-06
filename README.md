@@ -1,6 +1,6 @@
 # MindVault
 
-> **Your AI conversations. Your encryption keys. Your rules.**
+> **Your AI conversations. Decoupled from your identity. Stored in your own vault.**
 
 [English](#english) | [中文](#中文)
 
@@ -10,30 +10,56 @@
 
 ## The Problem
 
-Every message you send to ChatGPT, Claude, or any AI service is:
+There are two ways people interact with AI today. Both have serious issues:
 
-- **Tied to your identity** — email, phone, payment method
-- **Stored on their servers** — indefinitely, without your control
-- **Potentially used for training** — your thoughts become their product
-- **Building your psychological profile** — one conversation at a time
+### Web Apps (ChatGPT, Claude, Gemini...)
 
-You're not just asking questions. You're handing over your thought patterns, business secrets, personal struggles, and creative ideas — all linked to who you are.
+Every conversation is **permanently tied to your identity** — email, phone, payment method. Over time, these platforms build a complete psychological profile: your anxieties, your ambitions, your secrets. All linked to exactly who you are.
 
-**MindVault exists because this shouldn't be normal.**
+### API Clients (SillyTavern, Cherry Studio, etc.)
+
+You call APIs directly, which provides some anonymity. But your conversation history is **scattered across local files**, impossible to sync across devices, easy to lose, hard to migrate. There's no continuity, no provable record.
+
+| | Web Apps | API Clients | MindVault |
+|---|----------|-------------|-----------|
+| Identity binding | ❌ Strongly tied | ✅ Decoupled | ✅ Decoupled |
+| Data persistence | ✅ Cloud-synced | ❌ Local only, fragile | ✅ On-chain vault |
+| Cross-device access | ✅ Yes | ❌ Manual export | ✅ Wallet = access |
+| Context control | ❌ Platform holds all | ⚠️ Manual copy-paste | ✅ Selective disclosure |
+| Provable timestamps | ❌ No | ❌ No | ✅ Blockchain-anchored |
 
 ---
 
-## The Solution
+## What MindVault Actually Does (Today)
 
-MindVault is a privacy-first AI chat interface where:
+Let's be honest about what we can and cannot do:
 
-| What | How |
-|------|-----|
-| **Your messages are encrypted** | AES-256-GCM encryption happens in your browser, before anything leaves |
-| **You hold the keys** | Encryption key derived from your wallet signature — only you can decrypt |
-| **Storage is decentralized** | Encrypted data stored on Walrus, metadata on Sui blockchain |
-| **History belongs to you** | Load past conversations anytime, from any device, with your wallet |
-| **Proofs are on-chain** | Tamper-proof timestamps prove when conversations happened |
+### ✅ What We Solve Now
+
+1. **Identity-Data Decoupling**
+   - Each API call is independent, can route through anonymous relays
+   - The AI provider may see your message content, but **cannot link it to your real identity**
+   - They might know "someone is worried about a promotion" — but not *who*
+
+2. **Persistent, Portable Chat Vault**
+   - Your conversations are encrypted client-side (AES-256-GCM) and stored on Walrus
+   - Your wallet = your key. Access your history from any device, anytime
+   - No more losing years of AI conversations when you switch computers
+
+3. **Selective Context Disclosure**
+   - You choose which past conversations to include as context
+   - Minimum necessary disclosure — don't hand over your entire history every time
+
+4. **On-Chain Provenance**
+   - Every conversation gets a tamper-proof timestamp on Sui
+   - Perfect for: IP disputes, research priority, proving AI collaboration
+   - "Code is cheap, show me the prompt" — now you can actually prove it
+
+### ⚠️ Current Limitations (We're Honest)
+
+- **API providers still see current messages** — they just can't link them to your identity
+- **This is progressive privacy, not absolute privacy** — we reduce exposure, not eliminate it
+- **On-chain storage has costs** — meaningful for heavy users
 
 ---
 
@@ -41,52 +67,25 @@ MindVault is a privacy-first AI chat interface where:
 
 ### The Privacy-Conscious Professional
 
-**Sarah** is a startup founder who uses AI to brainstorm product strategies, draft investor emails, and analyze competitors. Her conversations contain trade secrets she'd never share publicly.
+**Sarah** uses AI for business strategy. With ChatGPT, her company's secrets are stored on OpenAI's servers, tied to her work email.
 
-*With traditional AI services:* All her strategic thinking is stored on OpenAI's servers, tied to her company email, potentially used for training, and vulnerable to data breaches.
+*With MindVault:* Her conversations are encrypted and identity-decoupled. Even if data leaks, it can't be traced back to Sarah or her company.
 
-*With MindVault:* Her conversations are encrypted before leaving her browser. Even if Walrus is compromised, attackers get meaningless ciphertext. She can prove when she had an idea (for IP disputes) without revealing what it was.
+### The Creator Who Needs Proof
 
----
+**Alex** is a hackathon participant. The judges want to see his AI collaboration process — "show me the prompt." Screenshots can be faked.
 
-### The Researcher Who Needs Proof
+*With MindVault:* His entire conversation history is anchored on-chain with timestamps. He can prove exactly when he had each idea, verifiable by anyone.
 
-**Dr. Chen** is documenting a novel research methodology through AI-assisted brainstorming. Six months later, a competitor publishes something similar.
+### The Power User Who Wants Continuity
 
-*The problem:* Screenshots can be faked. Server logs can be altered. How do you prove you had the idea first?
+**Dr. Chen** has used AI clients like Cherry Studio for years, but lost months of valuable research conversations when her laptop died.
 
-*With MindVault:* Every conversation is anchored to the Sui blockchain with a precise timestamp. Dr. Chen exports a cryptographic proof showing her encrypted conversation existed on a specific date. She can optionally reveal the content to prove what was inside. The blockchain doesn't lie.
-
----
-
-### The User Who Wants Control
-
-**Alex** simply doesn't want a corporation building a psychological profile from years of AI conversations. He wants to use AI without becoming the product.
-
-*With MindVault:*
-- Identity = wallet address (pseudonymous)
-- Current conversation = sent to AI, but can use anonymous API relays
-- History = encrypted, only Alex can read it
-
-Even if data leaks, it's **fragmented, encrypted, and unlinked**. A broken profile is infinitely better than a complete one.
+*With MindVault:* Her chat history lives on Walrus, accessible from any device with her wallet. Switch computers, switch clients — her context follows her.
 
 ---
 
-## Privacy Levels
-
-Choose your tradeoff:
-
-| Setup | Who sees your data? |
-|-------|---------------------|
-| MindVault + OpenAI/Claude API | Storage: Only you / Inference: Provider sees current message |
-| MindVault + Anonymous API relay | Storage: Only you / Inference: No identity link |
-| MindVault + Local model (Ollama) | Storage: Only you / Inference: Never leaves your device |
-
-**Key insight:** Pair MindVault with an anonymous API (crypto payment, no account) for true end-to-end privacy.
-
----
-
-## Architecture
+## Privacy Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -96,19 +95,50 @@ Choose your tradeoff:
 │  │ (identity)│  │ (encrypt) │  │ (only you have this)        │  │
 │  └───────────┘  └───────────┘  └─────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
-                              │
-           ┌──────────────────┴──────────────────┐
+           │                                     │
            ▼                                     ▼
 ┌─────────────────────────┐       ┌─────────────────────────────┐
-│   COLD STORAGE (Web3)   │       │   HOT PROCESSING (Stateless)│
+│   YOUR VAULT (Web3)     │       │   API CALL (Stateless)      │
 │                         │       │                             │
-│  Sui: metadata, proofs  │       │  API Routes: call LLM,      │
-│  Walrus: encrypted blobs│       │  return response, forget    │
-│                         │       │                             │
-│  📌 You own this. 100%. │       │  📌 We see it briefly,      │
-│                         │       │     but never store it.     │
+│  Sui: metadata, proofs  │       │  → Anonymous relay (opt.)   │
+│  Walrus: encrypted blobs│       │  → LLM processes message    │
+│                         │       │  → Response returned        │
+│  📌 Encrypted. Yours.   │       │  📌 Sees content, not you.  │
 └─────────────────────────┘       └─────────────────────────────┘
 ```
+
+### Privacy Levels
+
+| Setup | Storage | Inference |
+|-------|---------|-----------|
+| MindVault + Direct API | Only you | Provider sees content, not identity |
+| MindVault + Anonymous relay | Only you | No identity link at all |
+| MindVault + Local model | Only you | Never leaves your device |
+
+---
+
+## Roadmap: From Today to True Privacy
+
+### Phase 1: Now (Identity Decoupling + On-Chain Vault)
+- ✅ Client-side encryption with wallet-derived keys
+- ✅ Decentralized storage on Walrus + Sui
+- ✅ Selective context disclosure
+- ✅ On-chain timestamps for provenance
+- ⚠️ API providers see content (but not identity)
+
+### Phase 2: Next (Anonymous API Layer)
+- 🔄 Built-in anonymous relay integration
+- 🔄 Crypto payments for API calls (no account needed)
+- 🔄 Multi-provider routing for redundancy
+
+### Phase 3: Endgame (TEE-Based Inference)
+- 🎯 MindVault becomes an API provider itself
+- 🎯 AI runs inside TEE (Trusted Execution Environment)
+- 🎯 Even we cannot see your data during inference
+- 🎯 On-chain authorization: grant/revoke access anytime
+- 🎯 Fully verifiable pipeline from input to output
+
+*Why not jump to Phase 3?* TEE + LLM is still experimental, performance overhead is significant, and infrastructure isn't mature. But the direction is clear — we're building toward true end-to-end privacy.
 
 ---
 
@@ -140,18 +170,6 @@ Set **Root Directory** to `frontend`
 
 ---
 
-## What We're Building Toward
-
-MindVault today is step one. The vision:
-
-- **TEE-based inference** — AI runs in secure enclaves, even we can't see your data
-- **Crypto payments** — No identity required, ever
-- **Fully trustless pipeline** — Verifiable from input to output
-
-*Why not today?* TEE + LLM is experimental, performance overhead is significant, infrastructure isn't mature. But the direction is clear.
-
----
-
 ## Tech Stack
 
 | Layer | Tech |
@@ -176,36 +194,62 @@ MindVault today is step one. The vision:
 
 # MindVault
 
-> **你的 AI 对话。你的加密密钥。你的规则。**
+> **你的 AI 对话。与身份解耦。存入你自己的保险箱。**
 
 ---
 
 ## 问题
 
-每次你向 ChatGPT、Claude 或任何 AI 服务发送消息：
+当今人们与 AI 交互有两种方式，都有严重问题：
 
-- **与你的身份绑定** —— 邮箱、手机号、支付方式
-- **存储在他们的服务器上** —— 无限期，你无法控制
-- **可能用于训练** —— 你的思想成为他们的产品
-- **构建你的心理画像** —— 一次对话接一次
+### 网页应用（ChatGPT、Claude、Gemini...）
 
-你不只是在提问。你在交出你的思维模式、商业机密、个人困扰和创意想法——全部与你的身份关联。
+每次对话都**永久绑定你的身份** —— 邮箱、手机号、支付方式。随着时间推移，这些平台会构建出一个完整的心理画像：你的焦虑、你的野心、你的秘密。全部关联到你这个人。
 
-**MindVault 的存在，是因为这不应该成为常态。**
+### API 客户端（酒馆/SillyTavern、Cherry Studio 等）
+
+你直接调用 API，获得了一定的匿名性。但你的对话历史**散落在本地文件中**，无法跨设备同步，容易丢失，难以迁移。没有连续性，没有可证明的记录。
+
+| | 网页应用 | API 客户端 | MindVault |
+|---|----------|-------------|-----------|
+| 身份绑定 | ❌ 强绑定 | ✅ 解耦 | ✅ 解耦 |
+| 数据持久化 | ✅ 云同步 | ❌ 仅本地，脆弱 | ✅ 链上保险箱 |
+| 跨设备访问 | ✅ 是 | ❌ 手动导出 | ✅ 钱包即访问 |
+| 上下文控制 | ❌ 平台持有全部 | ⚠️ 手动复制粘贴 | ✅ 选择性披露 |
+| 可证明时间戳 | ❌ 无 | ❌ 无 | ✅ 区块链锚定 |
 
 ---
 
-## 解决方案
+## MindVault 现在能做什么（实话实说）
 
-MindVault 是一个隐私优先的 AI 聊天界面：
+让我们诚实地说明我们能做和不能做的事：
 
-| 什么 | 如何实现 |
-|------|---------|
-| **消息被加密** | AES-256-GCM 加密在浏览器中完成，数据离开前已加密 |
-| **密钥在你手中** | 加密密钥从钱包签名派生——只有你能解密 |
-| **存储去中心化** | 加密数据存储在 Walrus，元数据在 Sui 区块链 |
-| **历史属于你** | 随时从任何设备加载过去的对话，用你的钱包 |
-| **证明在链上** | 防篡改的时间戳证明对话何时发生 |
+### ✅ 我们现在解决的问题
+
+1. **身份-数据解耦**
+   - 每次 API 调用独立，可通过匿名中转路由
+   - AI 提供商可能看到你的消息内容，但**无法将其与你的真实身份关联**
+   - 他们可能知道"有人在担心升职问题"——但不知道*是谁*
+
+2. **持久化、可迁移的聊天保险箱**
+   - 你的对话在客户端加密（AES-256-GCM）并存储在 Walrus
+   - 你的钱包 = 你的密钥。随时从任何设备访问你的历史
+   - 换电脑再也不会丢失多年的 AI 对话
+
+3. **选择性上下文披露**
+   - 你选择将哪些过往对话作为上下文
+   - 最小必要披露 —— 不必每次都交出全部历史
+
+4. **链上溯源**
+   - 每次对话都在 Sui 上获得防篡改的时间戳
+   - 完美适用于：知识产权纠纷、研究优先权、证明 AI 协作
+   - "Code is cheap, show me the prompt" —— 现在你可以真正证明它了
+
+### ⚠️ 当前局限（我们诚实相告）
+
+- **API 提供商仍能看到当前消息** —— 只是无法将其与你的身份关联
+- **这是渐进式隐私，不是绝对隐私** —— 我们减少暴露，而非消除
+- **链上存储有成本** —— 对重度用户有影响
 
 ---
 
@@ -213,52 +257,25 @@ MindVault 是一个隐私优先的 AI 聊天界面：
 
 ### 注重隐私的专业人士
 
-**Sarah** 是一位创业公司创始人，她用 AI 来头脑风暴产品策略、起草投资人邮件、分析竞争对手。她的对话包含她绝不会公开分享的商业机密。
+**Sarah** 用 AI 做商业战略。用 ChatGPT 时，她公司的机密存储在 OpenAI 服务器上，绑定她的工作邮箱。
 
-*使用传统 AI 服务：* 她所有的战略思考都存储在 OpenAI 的服务器上，与她的公司邮箱绑定，可能用于训练，容易受到数据泄露的影响。
+*使用 MindVault：* 她的对话被加密且与身份解耦。即使数据泄露，也无法追溯到 Sarah 或她的公司。
 
-*使用 MindVault：* 她的对话在离开浏览器前就被加密。即使 Walrus 被攻破，攻击者得到的只是无意义的密文。她可以证明她何时有了某个想法（用于知识产权纠纷），而不需要透露想法是什么。
+### 需要证明的创作者
 
----
+**Alex** 是一名黑客松参赛者。评委想看他的 AI 协作过程 —— "show me the prompt"。截图可以伪造。
 
-### 需要证明的研究者
+*使用 MindVault：* 他的整个对话历史都锚定在链上并带有时间戳。他可以证明每个想法的确切产生时间，任何人都可验证。
 
-**陈博士** 正在通过 AI 辅助的头脑风暴记录一种新颖的研究方法。六个月后，一个竞争对手发表了类似的东西。
+### 追求连续性的重度用户
 
-*问题：* 截图可以伪造。服务器日志可以被篡改。你怎么证明你先想到的？
+**陈博士** 多年来一直使用 Cherry Studio 等 AI 客户端，但笔记本电脑坏掉时丢失了几个月宝贵的研究对话。
 
-*使用 MindVault：* 每次对话都锚定到 Sui 区块链，带有精确的时间戳。陈博士导出一个密码学证明，显示她的加密对话在特定日期存在。她可以选择性地揭示内容来证明里面是什么。区块链不会说谎。
-
----
-
-### 想要掌控的用户
-
-**Alex** 只是不想让一家公司从他多年的 AI 对话中构建心理画像。他想使用 AI，但不想成为产品。
-
-*使用 MindVault：*
-- 身份 = 钱包地址（匿名）
-- 当前对话 = 发送给 AI，但可以使用匿名 API 中转
-- 历史记录 = 加密，只有 Alex 能读取
-
-即使数据泄露，它也是**碎片化的、加密的、无法关联的**。破碎的画像比完整的画像好无限倍。
+*使用 MindVault：* 她的聊天历史存储在 Walrus 上，用钱包从任何设备都能访问。换电脑、换客户端 —— 她的上下文跟着她走。
 
 ---
 
-## 隐私级别
-
-选择你的权衡：
-
-| 设置 | 谁能看到你的数据？ |
-|------|-------------------|
-| MindVault + OpenAI/Claude API | 存储：只有你 / 推理：提供商看到当前消息 |
-| MindVault + 匿名 API 中转 | 存储：只有你 / 推理：无身份关联 |
-| MindVault + 本地模型 (Ollama) | 存储：只有你 / 推理：永不离开你的设备 |
-
-**关键洞察：** 将 MindVault 与匿名 API（加密货币支付，无需账号）配合使用，实现真正的端到端隐私。
-
----
-
-## 架构
+## 隐私架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -268,19 +285,50 @@ MindVault 是一个隐私优先的 AI 聊天界面：
 │  │ （身份）  │  │ （加密）  │  │ （只有你有这个）            │  │
 │  └───────────┘  └───────────┘  └─────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
-                              │
-           ┌──────────────────┴──────────────────┐
+           │                                     │
            ▼                                     ▼
 ┌─────────────────────────┐       ┌─────────────────────────────┐
-│   冷存储（Web3）         │       │   热处理（无状态）           │
+│   你的保险箱（Web3）     │       │   API 调用（无状态）         │
 │                         │       │                             │
-│  Sui: 元数据、证明       │       │  API 路由：调用 LLM，       │
-│  Walrus: 加密数据块      │       │  返回响应，然后遗忘         │
-│                         │       │                             │
-│  📌 这是你的。100%。    │       │  📌 我们短暂看到，          │
-│                         │       │     但从不存储。            │
+│  Sui: 元数据、证明       │       │  → 匿名中转（可选）          │
+│  Walrus: 加密数据块      │       │  → LLM 处理消息             │
+│                         │       │  → 返回响应                 │
+│  📌 加密的。你的。       │       │  📌 看到内容，不知道是谁。   │
 └─────────────────────────┘       └─────────────────────────────┘
 ```
+
+### 隐私级别
+
+| 设置 | 存储 | 推理 |
+|------|------|------|
+| MindVault + 直连 API | 只有你 | 提供商看到内容，不知身份 |
+| MindVault + 匿名中转 | 只有你 | 完全无身份关联 |
+| MindVault + 本地模型 | 只有你 | 永不离开你的设备 |
+
+---
+
+## 路线图：从今天到真正的隐私
+
+### 第一阶段：现在（身份解耦 + 链上保险箱）
+- ✅ 钱包派生密钥的客户端加密
+- ✅ Walrus + Sui 去中心化存储
+- ✅ 选择性上下文披露
+- ✅ 链上时间戳用于溯源
+- ⚠️ API 提供商看到内容（但不知身份）
+
+### 第二阶段：下一步（匿名 API 层）
+- 🔄 内置匿名中转集成
+- 🔄 加密货币支付 API 调用（无需账号）
+- 🔄 多提供商路由以提高冗余性
+
+### 第三阶段：终局（基于 TEE 的推理）
+- 🎯 MindVault 自己成为 API 提供商
+- 🎯 AI 在 TEE（可信执行环境）内运行
+- 🎯 即使我们也无法在推理时看到你的数据
+- 🎯 链上授权：随时授予/撤销访问权限
+- 🎯 从输入到输出完全可验证的流程
+
+*为什么不直接跳到第三阶段？* TEE + LLM 仍在实验阶段，性能开销显著，基础设施不成熟。但方向是明确的 —— 我们正在构建真正的端到端隐私。
 
 ---
 
@@ -309,18 +357,6 @@ npm run dev
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Azurboy/MindVault-VibeSui&root-directory=frontend&env=NEXT_PUBLIC_PACKAGE_ID)
 
 将 **Root Directory** 设置为 `frontend`
-
----
-
-## 我们正在构建的未来
-
-今天的 MindVault 是第一步。愿景：
-
-- **基于 TEE 的推理** —— AI 在安全飞地中运行，即使我们也看不到你的数据
-- **加密货币支付** —— 永远不需要身份
-- **完全无需信任的流程** —— 从输入到输出都可验证
-
-*为什么现在做不到？* TEE + LLM 还在实验阶段，性能开销显著，基础设施不成熟。但方向是明确的。
 
 ---
 
