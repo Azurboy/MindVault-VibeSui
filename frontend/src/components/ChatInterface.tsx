@@ -202,7 +202,7 @@ export function ChatInterface() {
     }
   };
 
-  // Export proof for a message
+  // Export proof for a message (or batch of messages sharing the same blobId)
   const handleExportProof = async (message: Message) => {
     if (!currentVault || !message.blobId || message.blobIndex === undefined) {
       alert("Cannot export proof: message not synced to vault");
@@ -210,13 +210,22 @@ export function ChatInterface() {
     }
 
     try {
+      // Get vault owner - use account address if vault.owner is not set
+      const vaultOwner = currentVault.owner || account?.address || "";
+
+      // For batch synced messages, include all messages in the same blob
+      const batchMessages = messages.filter(m => m.blobId === message.blobId);
+      const contentForHash = batchMessages.length > 1
+        ? JSON.stringify(batchMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp.getTime() })))
+        : message.content;
+
       const proof = await generateProof({
         vaultId: currentVault.objectId,
-        vaultOwner: currentVault.owner || "",
+        vaultOwner: vaultOwner,
         blobIndex: message.blobIndex,
         blobId: message.blobId,
         chainTimestamp: message.chainTimestamp || message.timestamp.getTime(),
-        content: message.content,
+        content: contentForHash,
       });
 
       downloadProof(proof);

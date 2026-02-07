@@ -268,9 +268,10 @@ export function parseProof(jsonString: string): ConversationProof | null {
     const parsed = JSON.parse(jsonString);
 
     // Validate required fields
+    // Note: vaultOwner can be empty string (will be validated during verification)
     if (
       !parsed.vaultId ||
-      !parsed.vaultOwner ||
+      typeof parsed.vaultOwner !== "string" ||
       typeof parsed.blobIndex !== "number" ||
       !parsed.blobId ||
       !parsed.chainTimestamp ||
