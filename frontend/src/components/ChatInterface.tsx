@@ -122,7 +122,7 @@ export function ChatInterface() {
     }
   }, [currentVault, isInitialized, isLoadingHistory, loadHistory, decrypt, messages]);
 
-  // Sync unsynced messages to vault
+  // Sync unsynced messages to vault - BATCH MODE: all messages in ONE transaction
   const handleSyncToVault = async () => {
     const unsyncedMessages = messages.filter(m => !m.synced);
     if (unsyncedMessages.length === 0) {
@@ -155,46 +155,44 @@ export function ChatInterface() {
     }
 
     setIsSyncing(true);
-    setSyncProgress({ current: 0, total: unsyncedMessages.length });
+    setSyncProgress({ current: 0, total: 1 }); // Just 1 batch operation
 
     try {
-      const updatedMessages = [...messages];
+      // Pack ALL unsynced messages into a single blob
+      const messagesToStore: StoredMessage[] = unsyncedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.getTime(),
+      }));
 
-      for (let i = 0; i < unsyncedMessages.length; i++) {
-        const msg = unsyncedMessages[i];
-        setSyncProgress({ current: i + 1, total: unsyncedMessages.length });
+      // Encrypt the entire batch as one JSON array
+      const { ciphertext, iv } = await encrypt(JSON.stringify(messagesToStore));
 
-        try {
-          // Store as structured message
-          const messageToStore: StoredMessage = {
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp.getTime(),
+      // Upload to Walrus (one upload)
+      const result = await uploadToWalrus(ciphertext);
+
+      // Store on chain (one transaction, one signature)
+      const blobIdBytes = new TextEncoder().encode(result.blobId);
+      await storeBlob(blobIdBytes, 0, iv);
+
+      setSyncProgress({ current: 1, total: 1 });
+
+      // Mark all messages as synced
+      const updatedMessages = messages.map(msg => {
+        if (!msg.synced) {
+          return {
+            ...msg,
+            synced: true,
+            blobId: result.blobId,
+            blobIndex: currentVault.blobCount,
+            chainTimestamp: Date.now(),
           };
-          const { ciphertext, iv } = await encrypt(JSON.stringify(messageToStore));
-          const result = await uploadToWalrus(ciphertext);
-          const blobIdBytes = new TextEncoder().encode(result.blobId);
-          await storeBlob(blobIdBytes, 0, iv);
-
-          // Update the message in our list
-          const msgIndex = updatedMessages.findIndex(m => m.id === msg.id);
-          if (msgIndex !== -1) {
-            updatedMessages[msgIndex] = {
-              ...updatedMessages[msgIndex],
-              synced: true,
-              blobId: result.blobId,
-              blobIndex: currentVault.blobCount + i,
-              chainTimestamp: Date.now(),
-            };
-          }
-        } catch (err) {
-          console.error(`Failed to sync message ${i + 1}:`, err);
-          // Continue with next message
         }
-      }
+        return msg;
+      });
 
       setMessages(updatedMessages);
-      alert(`Successfully synced ${unsyncedMessages.length} messages to your vault!`);
+      alert(`Successfully synced ${unsyncedMessages.length} messages to your vault in 1 transaction!`);
     } catch (err) {
       console.error("Sync failed:", err);
       alert("Sync failed. Please try again.");

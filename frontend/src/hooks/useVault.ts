@@ -198,6 +198,7 @@ export function useVault() {
   );
 
   // Load chat history from Walrus
+  // Supports both batch format (array of messages) and legacy single-message format
   const loadHistory = useCallback(
     async (
       decrypt: (ciphertext: Uint8Array, iv: Uint8Array) => Promise<string>
@@ -225,15 +226,32 @@ export function useVault() {
             // Decrypt the data
             const decrypted = await decrypt(encryptedData, ref.iv);
 
-            // Parse the message
+            // Parse the message(s)
             try {
-              const parsed = JSON.parse(decrypted) as StoredMessage;
-              messages.push({
-                ...parsed,
-                blobIndex: ref.index,
-                blobId: ref.blobId,
-                chainTimestamp: ref.createdAt,
-              });
+              const parsed = JSON.parse(decrypted);
+
+              // Check if it's a batch (array) or single message
+              if (Array.isArray(parsed)) {
+                // Batch format: array of messages
+                for (const msg of parsed) {
+                  messages.push({
+                    role: msg.role,
+                    content: msg.content,
+                    timestamp: msg.timestamp,
+                    blobIndex: ref.index,
+                    blobId: ref.blobId,
+                    chainTimestamp: ref.createdAt,
+                  });
+                }
+              } else {
+                // Single message format (legacy)
+                messages.push({
+                  ...parsed,
+                  blobIndex: ref.index,
+                  blobId: ref.blobId,
+                  chainTimestamp: ref.createdAt,
+                });
+              }
             } catch {
               // If not JSON, treat as plain text (legacy format)
               messages.push({
