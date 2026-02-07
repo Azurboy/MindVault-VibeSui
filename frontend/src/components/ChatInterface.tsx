@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Loader2, Lock, AlertCircle, Settings, Download, History, RefreshCw } from "lucide-react";
+import { Send, Bot, User, Loader2, Lock, AlertCircle, Settings, Download, History, Upload, Check } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useEncryption } from "@/hooks/useEncryption";
 import { useVault, StoredMessage } from "@/hooks/useVault";
@@ -14,7 +14,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  encrypted?: boolean;
+  synced?: boolean; // Whether this message has been synced to vault
   blobIndex?: number;
   blobId?: string;
   chainTimestamp?: number;
@@ -27,20 +27,21 @@ interface AIProviderConfig {
 }
 
 const STORAGE_KEY = "mindvault_ai_provider";
+const LOCAL_MESSAGES_KEY = "mindvault_local_messages";
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [saveToWalrus, setSaveToWalrus] = useState(true);
   const [providerConfig, setProviderConfig] = useState<AIProviderConfig | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const account = useCurrentAccount();
   const { encrypt, decrypt, isInitialized, initialize, isInitializing } = useEncryption();
-  const { currentVault, storeBlob, loadHistory } = useVault();
+  const { currentVault, storeBlob, loadHistory, fetchVaults } = useVault();
 
   // Load provider config from localStorage
   useEffect(() => {
@@ -57,19 +58,40 @@ export function ChatInterface() {
     }
   }, []);
 
+  // Load local messages from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(LOCAL_MESSAGES_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setMessages(parsed.map((m: Message) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          })));
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+  }, []);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(LOCAL_MESSAGES_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
+
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initialize encryption when component mounts
-  useEffect(() => {
-    if (account && !isInitialized && !isInitializing) {
-      initialize();
-    }
-  }, [account, isInitialized, isInitializing, initialize]);
+  // Count unsynced messages
+  const unsyncedCount = messages.filter(m => !m.synced).length;
 
-  // Load history when vault and encryption are ready
+  // Load history from vault
   const handleLoadHistory = useCallback(async () => {
     if (!currentVault || !isInitialized || isLoadingHistory) return;
 
@@ -83,33 +105,109 @@ export function ChatInterface() {
           role: msg.role,
           content: msg.content,
           timestamp: new Date(msg.timestamp),
-          encrypted: true,
+          synced: true,
           blobIndex: msg.blobIndex,
           blobId: msg.blobId,
           chainTimestamp: msg.chainTimestamp,
         }));
 
-        setMessages(loadedMessages);
-        setHistoryLoaded(true);
+        // Merge with existing unsynced messages
+        const unsyncedMessages = messages.filter(m => !m.synced);
+        setMessages([...loadedMessages, ...unsyncedMessages]);
       }
     } catch (err) {
       console.error("Failed to load history:", err);
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [currentVault, isInitialized, isLoadingHistory, loadHistory, decrypt]);
+  }, [currentVault, isInitialized, isLoadingHistory, loadHistory, decrypt, messages]);
 
-  // Auto-load history when vault and encryption are ready (only once)
-  useEffect(() => {
-    if (currentVault && isInitialized && !historyLoaded && !isLoadingHistory && messages.length === 0) {
-      handleLoadHistory();
+  // Sync unsynced messages to vault
+  const handleSyncToVault = async () => {
+    const unsyncedMessages = messages.filter(m => !m.synced);
+    if (unsyncedMessages.length === 0) {
+      alert("No messages to sync!");
+      return;
     }
-  }, [currentVault, isInitialized, historyLoaded, isLoadingHistory, messages.length, handleLoadHistory]);
+
+    if (!account) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    // Initialize encryption if needed
+    if (!isInitialized) {
+      const success = await initialize();
+      if (!success) {
+        alert("Failed to initialize encryption. Please try again.");
+        return;
+      }
+    }
+
+    // Fetch vaults if needed
+    if (!currentVault) {
+      await fetchVaults();
+    }
+
+    if (!currentVault) {
+      alert("No vault found. Please create a vault in Dashboard first.");
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncProgress({ current: 0, total: unsyncedMessages.length });
+
+    try {
+      const updatedMessages = [...messages];
+
+      for (let i = 0; i < unsyncedMessages.length; i++) {
+        const msg = unsyncedMessages[i];
+        setSyncProgress({ current: i + 1, total: unsyncedMessages.length });
+
+        try {
+          // Store as structured message
+          const messageToStore: StoredMessage = {
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp.getTime(),
+          };
+          const { ciphertext, iv } = await encrypt(JSON.stringify(messageToStore));
+          const result = await uploadToWalrus(ciphertext);
+          const blobIdBytes = new TextEncoder().encode(result.blobId);
+          await storeBlob(blobIdBytes, 0, iv);
+
+          // Update the message in our list
+          const msgIndex = updatedMessages.findIndex(m => m.id === msg.id);
+          if (msgIndex !== -1) {
+            updatedMessages[msgIndex] = {
+              ...updatedMessages[msgIndex],
+              synced: true,
+              blobId: result.blobId,
+              blobIndex: currentVault.blobCount + i,
+              chainTimestamp: Date.now(),
+            };
+          }
+        } catch (err) {
+          console.error(`Failed to sync message ${i + 1}:`, err);
+          // Continue with next message
+        }
+      }
+
+      setMessages(updatedMessages);
+      alert(`Successfully synced ${unsyncedMessages.length} messages to your vault!`);
+    } catch (err) {
+      console.error("Sync failed:", err);
+      alert("Sync failed. Please try again.");
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress({ current: 0, total: 0 });
+    }
+  };
 
   // Export proof for a message
   const handleExportProof = async (message: Message) => {
     if (!currentVault || !message.blobId || message.blobIndex === undefined) {
-      alert("Cannot export proof: message not stored on chain");
+      alert("Cannot export proof: message not synced to vault");
       return;
     }
 
@@ -130,6 +228,17 @@ export function ChatInterface() {
     }
   };
 
+  // Clear local messages
+  const handleClearMessages = () => {
+    if (unsyncedCount > 0) {
+      if (!confirm(`You have ${unsyncedCount} unsynced messages. Clear anyway?`)) {
+        return;
+      }
+    }
+    setMessages([]);
+    localStorage.removeItem(LOCAL_MESSAGES_KEY);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading || !providerConfig) return;
@@ -139,6 +248,7 @@ export function ChatInterface() {
       role: "user",
       content: input,
       timestamp: new Date(),
+      synced: false,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -146,28 +256,6 @@ export function ChatInterface() {
     setIsLoading(true);
 
     try {
-      // Save to Walrus if enabled and vault exists
-      if (saveToWalrus && currentVault && isInitialized) {
-        try {
-          // Store as structured message
-          const messageToStore: StoredMessage = {
-            role: "user",
-            content: input,
-            timestamp: Date.now(),
-          };
-          const { ciphertext, iv } = await encrypt(JSON.stringify(messageToStore));
-          const result = await uploadToWalrus(ciphertext);
-          const blobIdBytes = new TextEncoder().encode(result.blobId);
-          await storeBlob(blobIdBytes, 0, iv);
-          userMessage.encrypted = true;
-          userMessage.blobId = result.blobId;
-          userMessage.blobIndex = currentVault.blobCount;
-          userMessage.chainTimestamp = Date.now();
-        } catch (err) {
-          console.error("Failed to save to Walrus:", err);
-        }
-      }
-
       // Call AI API with user's provider config - send full history as context
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -194,53 +282,23 @@ export function ChatInterface() {
         role: "assistant",
         content: data.response,
         timestamp: new Date(),
+        synced: false,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      // Save assistant response to Walrus
-      if (saveToWalrus && currentVault && isInitialized) {
-        try {
-          // Store as structured message
-          const messageToStore: StoredMessage = {
-            role: "assistant",
-            content: data.response,
-            timestamp: Date.now(),
-          };
-          const { ciphertext, iv } = await encrypt(JSON.stringify(messageToStore));
-          const result = await uploadToWalrus(ciphertext);
-          const blobIdBytes = new TextEncoder().encode(result.blobId);
-          await storeBlob(blobIdBytes, 0, iv);
-          assistantMessage.encrypted = true;
-          assistantMessage.blobId = result.blobId;
-          assistantMessage.blobIndex = currentVault.blobCount;
-          assistantMessage.chainTimestamp = Date.now();
-        } catch (err) {
-          console.error("Failed to save response to Walrus:", err);
-        }
-      }
     } catch (error) {
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
         content: error instanceof Error ? `Error: ${error.message}` : "Sorry, I encountered an error. Please try again.",
         timestamp: new Date(),
+        synced: false,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (!account) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-gray-400">
-        <Lock className="w-16 h-16 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Connect Your Wallet</h2>
-        <p>Connect your Sui wallet to start a private AI conversation.</p>
-      </div>
-    );
-  }
 
   // Get provider display name
   const getProviderName = () => {
@@ -287,12 +345,12 @@ export function ChatInterface() {
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {/* Load History Button */}
-          {currentVault && isInitialized && (
+          {account && (
             <button
               onClick={handleLoadHistory}
-              disabled={isLoadingHistory}
+              disabled={isLoadingHistory || !isInitialized}
               className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50"
               title="Load chat history from Walrus"
             >
@@ -301,20 +359,42 @@ export function ChatInterface() {
               ) : (
                 <History className="w-4 h-4" />
               )}
-              {isLoadingHistory ? "Loading..." : "Load History"}
+              Load History
             </button>
           )}
 
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={saveToWalrus}
-              onChange={(e) => setSaveToWalrus(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
-            />
-            <Lock className="w-4 h-4" />
-            Save encrypted to Walrus
-          </label>
+          {/* Sync to Vault Button - THE MAIN FEATURE */}
+          {account && unsyncedCount > 0 && (
+            <button
+              onClick={handleSyncToVault}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transition-all shadow-lg hover:shadow-blue-500/25"
+              title="Sync unsynced messages to your vault"
+            >
+              {isSyncing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Syncing {syncProgress.current}/{syncProgress.total}...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Sync to Vault ({unsyncedCount})
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Clear Messages */}
+          {messages.length > 0 && (
+            <button
+              onClick={handleClearMessages}
+              className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+              title="Clear all messages"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -332,14 +412,16 @@ export function ChatInterface() {
         </div>
       )}
 
-      {/* Encryption Status */}
-      {!isInitialized && (
-        <div className="flex items-center gap-2 p-3 bg-yellow-900/20 border-b border-yellow-800 text-yellow-400 text-sm">
-          <AlertCircle className="w-4 h-4" />
-          {isInitializing ? (
-            <span>Initializing encryption... Please sign the message in your wallet.</span>
-          ) : (
-            <span>Encryption not initialized. Messages will not be saved to Walrus.</span>
+      {/* Sync Status Info */}
+      {messages.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-900/50 border-b border-gray-800 text-xs text-gray-500">
+          <span>
+            {messages.length} messages ({unsyncedCount} unsynced, {messages.length - unsyncedCount} on-chain)
+          </span>
+          {!account && unsyncedCount > 0 && (
+            <span className="text-yellow-500">
+              Connect wallet to sync messages to your vault
+            </span>
           )}
         </div>
       )}
@@ -359,16 +441,12 @@ export function ChatInterface() {
         {!isLoadingHistory && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <Bot className="w-16 h-16 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Start a Private Conversation</h3>
+            <h3 className="text-lg font-medium mb-2">Start a Conversation</h3>
             <p className="text-sm text-center max-w-md">
-              Your messages are encrypted client-side before being stored.
-              Only you can decrypt and read your conversation history.
+              Chat freely — messages stay local until you choose to sync.
+              <br />
+              <span className="text-blue-400">Click &quot;Sync to Vault&quot; when you want to save on-chain.</span>
             </p>
-            {historyLoaded && currentVault && currentVault.blobCount > 0 && (
-              <p className="text-sm text-center max-w-md mt-2 text-blue-400">
-                {currentVault.blobCount} encrypted messages found. Click &quot;Load History&quot; to view.
-              </p>
-            )}
             {!providerConfig && (
               <Link
                 href="/settings"
@@ -409,10 +487,15 @@ export function ChatInterface() {
                     minute: "2-digit",
                   })}
                 </span>
-                {message.encrypted && (
-                  <span className="flex items-center gap-1">
+                {message.synced ? (
+                  <span className="flex items-center gap-1 text-green-400">
+                    <Check className="w-3 h-3" />
+                    On-chain
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-yellow-400">
                     <Lock className="w-3 h-3" />
-                    Encrypted
+                    Local
                   </span>
                 )}
                 {message.blobId && (
